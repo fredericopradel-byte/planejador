@@ -72,7 +72,17 @@
   .row-actions{display:flex;gap:5px;white-space:nowrap}
   .summary{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
   @media(max-width:950px){.builder{grid-template-columns:1fr}.rose-panel{max-width:680px;margin:auto}.metadata{grid-template-columns:1fr 1fr}.metadata label:first-child{grid-column:1/-1}}
-  @media(max-width:570px){.app{padding:10px}.topbar{display:block}.toolbar{justify-content:flex-start;margin-top:10px}.metadata,.form-grid,.activity-fields{grid-template-columns:1fr}.metadata label:first-child,.full,.activity-fields h3{grid-column:auto}h1{font-size:21px}}
+  @media(max-width:570px){.app{padding:10px 10px 82px}.topbar{display:block}.toolbar{justify-content:flex-start;margin-top:10px}.metadata,.form-grid,.activity-fields{grid-template-columns:1fr}.metadata label:first-child,.full,.activity-fields h3{grid-column:auto}h1{font-size:21px}.subtitle{font-size:13px}.page-nav{position:fixed;left:0;right:0;bottom:0;top:auto;margin:0;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--border);z-index:50;gap:5px}.page-nav button{min-height:48px;padding:5px 3px;font-size:12px;border:none;background:transparent}.page-nav button.active{border-radius:9px}.panel{margin-bottom:10px}.page-heading{align-items:flex-start}.rose-toolbar button{min-height:38px;padding:6px 8px}.table-wrap{margin:0 -14px;padding:0 14px}}
+
+  .page-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;position:sticky;top:0;z-index:20;background:var(--bg);padding:8px 0}
+  .page-nav button{font-weight:600}
+  .page-nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .app-page[hidden]{display:none!important}
+  .page-heading{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}
+  .page-heading h2{margin:0}
+  .mission-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .rose-page .rose-panel{max-width:900px;margin:0 auto 14px}
+  .execution-page .panel{margin-bottom:0}
   @media(prefers-color-scheme:dark){:root{--bg:#11161c;--panel:#1c232c;--text:#f3f6fa;--muted:#abb6c4;--border:#526071;--accent:#2476bd;--blue:#56a6ff;--red:#ff6262;--danger:#ff8585;--soft:#23384d}}
 </style>
 </head>
@@ -80,27 +90,36 @@
 <main class="app">
   <div class="topbar">
     <div>
-      <h1>Planejador DVOR offline</h1>
-      <div class="subtitle">Cadastro manual de radiais e acompanhamento da inspeção</div>
-    </div>
-    <div class="toolbar">
-      <button id="new-mission" type="button">Nova missão</button>
-      <button id="import-btn" type="button">Importar JSON</button>
-      <button id="export-btn" type="button">Exportar missão</button>
-      <input id="import-file" type="file" accept="application/json,.json" hidden>
+      <h1>Planejador DVOR</h1>
+      <div class="subtitle">Planejamento e acompanhamento da inspeção</div>
     </div>
   </div>
 
-  <section class="panel">
-    <h2>Identificação da missão</h2>
-    <div class="metadata">
-      <label>Localidade / auxílio<input id="mission-name" placeholder="Ex.: Porto Velho - PVH"></label>
-      <label>Número do planejamento<input id="mission-number" placeholder="Ex.: 16"></label>
-      <label>Data<input id="mission-date" type="date"></label>
-    </div>
+  <nav class="page-nav" aria-label="Páginas do aplicativo">
+    <button type="button" class="active" data-page="mission">Missão</button>
+    <button type="button" data-page="plan">Planejar</button>
+    <button type="button" data-page="rose">Rosa</button>
+    <button type="button" data-page="execution">Execução</button>
+  </nav>
+
+  <section class="app-page" id="page-mission">
+    <section class="panel">
+      <div class="page-heading"><h2>Identificação da missão</h2></div>
+      <div class="metadata">
+        <label>Localidade / auxílio<input id="mission-name" placeholder="Ex.: Porto Velho - PVH"></label>
+        <label>Número do planejamento<input id="mission-number" placeholder="Ex.: 16"></label>
+        <label>Data<input id="mission-date" type="date"></label>
+      </div>
+      <div class="mission-actions">
+        <button id="new-mission" type="button">Nova missão</button>
+        <button id="import-btn" type="button">Importar JSON</button>
+        <button class="primary" id="export-btn" type="button">Exportar missão</button>
+        <input id="import-file" type="file" accept="application/json,.json" hidden>
+      </div>
+    </section>
   </section>
 
-  <div class="builder">
+  <section class="app-page" id="page-plan" hidden>
     <section class="panel">
       <h2 id="form-title">Adicionar atividade</h2>
       <form id="activity-form" novalidate>
@@ -136,8 +155,14 @@
         </div>
       </form>
     </section>
+  </section>
 
+  <section class="app-page rose-page" id="page-rose" hidden>
     <section class="panel rose-panel" id="rose-panel">
+      <div class="summary">
+        <h2>Rosa da missão</h2>
+        <div><strong id="progress-rose">0/0 TX feitos</strong> · <span id="scale-info" class="muted">Escala: 10 NM</span></div>
+      </div>
       <div class="rose-toolbar" aria-label="Controles da rosa">
         <button id="zoom-out" type="button" aria-label="Reduzir zoom">−</button>
         <span id="zoom-level" class="zoom-level" aria-live="polite">100%</span>
@@ -156,22 +181,24 @@
         <span>Feito = cor clara</span>
       </div>
     </section>
-  </div>
+  </section>
 
-  <section class="panel">
-    <div class="summary">
-      <h2>Atividades da missão</h2>
-      <div><strong id="progress">0/0 TX feitos</strong> · <span id="scale-info" class="muted">Escala: 10 NM</span></div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th rowspan="2">Atividade</th><th rowspan="2">Trecho</th><th class="center" colspan="2">TX1</th><th class="center" colspan="2">TX2</th><th rowspan="2">Ações</th></tr>
-          <tr><th class="center">Planejado</th><th class="center">Feito</th><th class="center">Planejado</th><th class="center">Feito</th></tr>
-        </thead>
-        <tbody id="activity-rows"></tbody>
-      </table>
-    </div>
+  <section class="app-page execution-page" id="page-execution" hidden>
+    <section class="panel">
+      <div class="summary">
+        <h2>Execução da missão</h2>
+        <div><strong id="progress">0/0 TX feitos</strong></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th rowspan="2">Atividade</th><th rowspan="2">Trecho</th><th class="center" colspan="2">TX1</th><th class="center" colspan="2">TX2</th><th rowspan="2">Ações</th></tr>
+            <tr><th class="center">Planejado</th><th class="center">Feito</th><th class="center">Planejado</th><th class="center">Feito</th></tr>
+          </thead>
+          <tbody id="activity-rows"></tbody>
+        </table>
+      </div>
+    </section>
   </section>
 </main>
 
@@ -185,6 +212,16 @@
   let mission={metadata:{name:'',number:'',date:''},activities:[]};
   let viewZoom=1, viewX=center, viewY=center, lastPinch=null;
   const pointers=new Map();
+  let currentPage='mission';
+  function showPage(page){
+    currentPage=page;
+    document.querySelectorAll('.app-page').forEach(el=>el.hidden=el.id!==`page-${page}`);
+    document.querySelectorAll('.page-nav button').forEach(btn=>btn.classList.toggle('active',btn.dataset.page===page));
+    window.scrollTo({top:0,behavior:'instant'});
+    if(page==='rose'){renderRose();applyView();}
+    if(page==='execution')renderTable();
+  }
+
 
   function load(){
     try{
@@ -267,7 +304,7 @@
       const actions=document.createElement('td'),wrap=document.createElement('div');wrap.className='row-actions';wrap.append(actionButton('Editar',()=>editActivity(a.id)),actionButton('Excluir',()=>deleteActivity(a.id),'danger'));actions.append(wrap);row.append(actions);
       row.addEventListener('click',event=>{if(event.target.closest('input,button'))return;focusActivity(a.id);});body.append(row);
     });
-    const total=mission.activities.reduce((n,a)=>n+Number(a.tx1Planned)+Number(a.tx2Planned),0),completed=mission.activities.reduce((n,a)=>n+Number(a.tx1Planned&&a.tx1Done)+Number(a.tx2Planned&&a.tx2Done),0);$('#progress').textContent=`${completed}/${total} TX feitos`;
+    const total=mission.activities.reduce((n,a)=>n+Number(a.tx1Planned)+Number(a.tx2Planned),0),completed=mission.activities.reduce((n,a)=>n+Number(a.tx1Planned&&a.tx1Done)+Number(a.tx2Planned&&a.tx2Done),0);$('#progress').textContent=`${completed}/${total} TX feitos`;const roseProgress=$('#progress-rose');if(roseProgress)roseProgress.textContent=`${completed}/${total} TX feitos`;
   }
   function renderAll(){renderRose();renderTable();applyView();}
   function setType(type=$('#activity-type').value){
@@ -285,6 +322,7 @@
     const arcStart=num($('#arc-start').value),arcEnd=num($('#arc-end').value),radiusNm=num($('#arc-radius').value);if(!Number.isFinite(arcStart)||!Number.isFinite(arcEnd)||arcStart<0||arcStart>=360||arcEnd<0||arcEnd>=360||arcStart===arcEnd)return{error:'Informe azimutes inicial e final válidos e diferentes.'};if(!Number.isFinite(radiusNm)||radiusNm<=0||radiusNm>500)return{error:'O raio do arco deve estar entre 0,1 e 500 NM.'};return{activity:{...base,arcStart,arcEnd,radius:radiusNm}};
   }
   function editActivity(id){
+    showPage('plan');
     const a=mission.activities.find(item=>item.id===id);if(!a)return;editingId=id;$('#activity-type').value=a.type;setType();$('#activity-description').value=a.description;$('#activity-notes').value=a.notes||'';$('#plan-tx1').checked=a.tx1Planned;$('#plan-tx2').checked=a.tx2Planned;
     if(a.type==='radial'){$('#radial-az').value=a.azimuth;$('#radial-start').value=a.start;$('#radial-end').value=a.end;}else{$('#arc-start').value=a.arcStart;$('#arc-end').value=a.arcEnd;$('#arc-radius').value=a.radius;}
     $('#form-title').textContent='Editar atividade';$('#save-activity').textContent='Salvar alterações';$('#cancel-edit').hidden=false;$('#activity-form').scrollIntoView({behavior:'smooth',block:'start'});
@@ -298,6 +336,7 @@
   function exportMission(){const blob=new Blob([JSON.stringify({...mission,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a'),name=(mission.metadata.name||'missao-dvor').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();link.href=url;link.download=`${name||'missao-dvor'}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function importMission(file){const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!data.metadata||!Array.isArray(data.activities))throw new Error();mission={metadata:data.metadata,activities:data.activities};save();load();resetForm();fitMission();renderAll();}catch(_){alert('Arquivo de missão inválido.');}};reader.readAsText(file);}
 
+  document.querySelectorAll('.page-nav button').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.page)));
   $('#choose-radial').addEventListener('click',()=>setType('radial'));
   $('#choose-arc').addEventListener('click',()=>setType('arc'));
   $('#activity-form').addEventListener('submit',event=>{event.preventDefault();const result=validateActivity();if(result.error){$('#form-error').textContent=result.error;return;}const existing=mission.activities.find(a=>a.id===editingId);if(existing){result.activity.tx1Done=existing.tx1Done&&result.activity.tx1Planned;result.activity.tx2Done=existing.tx2Done&&result.activity.tx2Planned;mission.activities=mission.activities.map(a=>a.id===editingId?result.activity:a);}else mission.activities.push(result.activity);save();resetForm();fitMission();renderAll();});
@@ -311,7 +350,7 @@
   $('#rose').addEventListener('pointermove',event=>{const previous=pointers.get(event.pointerId);if(!previous)return;pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});if(pointers.size===1&&viewZoom>1){const rect=$('#rose').getBoundingClientRect(),scale=500/(viewZoom*rect.width);viewX-=(event.clientX-previous.x)*scale;viewY-=(event.clientY-previous.y)*scale;applyView();}else if(pointers.size===2){const p=[...pointers.values()],distance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(lastPinch)setZoom(viewZoom*distance/lastPinch);lastPinch=distance;}});
   function release(event){pointers.delete(event.pointerId);lastPinch=null;if(!pointers.size)$('#rose').classList.remove('dragging');}$('#rose').addEventListener('pointerup',release);$('#rose').addEventListener('pointercancel',release);
 
-  load();setType();renderAll();
+  load();setType();renderAll();showPage('mission');
 })();
 </script>
 <script>
