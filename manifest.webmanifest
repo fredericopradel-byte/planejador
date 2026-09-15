@@ -2,7 +2,7 @@
   "name": "GEIV - Planejador DVOR",
   "short_name": "GEIV DVOR",
   "description": "Planejador DVOR offline para cadastro manual de radiais e arcos DME.",
-  "start_url": "./GEIV_DVOR.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f5f7fa",
