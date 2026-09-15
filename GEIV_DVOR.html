@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#194f87">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="GEIV DVOR">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>GEIV - Planejador DVOR Offline</title>
+<style>
+  :root{color-scheme:light dark;--bg:#f5f7fa;--panel:#fff;--text:#172231;--muted:#657286;--border:#aeb9c8;--accent:#194f87;--blue:#1473e6;--red:#d73535;--danger:#a82a2a;--soft:#e9f1fa}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+  button,input,select,textarea{font:inherit}
+  button{min-height:42px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);padding:8px 12px;cursor:pointer}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.danger{color:var(--danger)}
+  button.small{min-height:36px;padding:6px 9px}
+  input,select,textarea{width:100%;min-height:42px;border:1px solid var(--border);border-radius:7px;background:var(--panel);color:var(--text);padding:8px}
+  input[type=checkbox]{width:21px;min-height:auto;height:21px;padding:0}
+  textarea{resize:vertical;min-height:42px}
+  label{display:block;font-size:13px;color:var(--muted)}
+  label>input,label>select,label>textarea{margin-top:4px;color:var(--text)}
+  .app{max-width:1500px;margin:auto;padding:18px}
+  .topbar{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:14px}
+  h1{font-size:24px;margin:0 0 4px;font-weight:600}
+  h2{font-size:17px;margin:0 0 12px;font-weight:600}
+  .subtitle,.muted{color:var(--muted)}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px}
+  .metadata{display:grid;grid-template-columns:1.4fr .8fr .6fr;gap:10px}
+  .builder{display:grid;grid-template-columns:minmax(330px,.8fr) minmax(500px,1.2fr);gap:14px;align-items:start}
+  .form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .full{grid-column:1/-1}
+  .type-choice{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .type-choice button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .activity-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px;border:1px solid var(--border);border-radius:9px}
+  .activity-fields[hidden]{display:none}
+  .activity-fields h3{grid-column:1/-1;font-size:15px;margin:0;color:var(--text)}
+  .tx-plan{display:flex;gap:18px;align-items:center;min-height:42px}
+  .tx-plan label{display:flex;align-items:center;gap:7px;color:var(--text);font-size:14px}
+  .form-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .error{color:var(--danger);min-height:18px;margin:8px 0 0;font-size:13px}
+  .rose-toolbar{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;align-items:center;margin-bottom:5px}
+  .zoom-level{min-width:52px;text-align:center;color:var(--muted)}
+  #rose{width:100%;height:auto;display:block;touch-action:none;user-select:none;cursor:grab}
+  #rose.dragging{cursor:grabbing}
+  .grid-circle{fill:none;stroke:var(--border);stroke-width:1}
+  .axis{stroke:var(--muted);stroke-width:1}
+  .grid-label{fill:var(--muted);font-size:12px}
+  .cardinal,.radial-label{fill:var(--text);font-size:12px;font-weight:600}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;color:var(--muted);font-size:13px;margin-top:7px}
+  .swatch{display:inline-block;width:25px;height:4px;margin-right:5px;vertical-align:middle}
+  .blue{background:var(--blue)}.red{background:var(--red)}
+  #rose-panel:fullscreen{background:var(--panel);padding:18px;overflow:auto;display:flex;flex-direction:column;justify-content:center}
+  #rose-panel:fullscreen #rose{max-height:calc(100vh - 115px)}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;background:var(--panel)}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+  th{font-size:13px;color:var(--muted);font-weight:600}
+  td.center,th.center{text-align:center}
+  td.check{min-width:72px}
+  td.check label{min-height:44px;display:flex;align-items:center;justify-content:center}
+  tr.selected{background:var(--soft)}
+  tr.done{opacity:.5}
+  .empty{text-align:center;color:var(--muted);padding:24px}
+  .activity-title{font-weight:600;white-space:nowrap}
+  .activity-detail{min-width:190px}
+  .row-actions{display:flex;gap:5px;white-space:nowrap}
+  .summary{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  @media(max-width:950px){.builder{grid-template-columns:1fr}.rose-panel{max-width:680px;margin:auto}.metadata{grid-template-columns:1fr 1fr}.metadata label:first-child{grid-column:1/-1}}
+  @media(max-width:570px){.app{padding:10px}.topbar{display:block}.toolbar{justify-content:flex-start;margin-top:10px}.metadata,.form-grid,.activity-fields{grid-template-columns:1fr}.metadata label:first-child,.full,.activity-fields h3{grid-column:auto}h1{font-size:21px}}
+  @media(prefers-color-scheme:dark){:root{--bg:#11161c;--panel:#1c232c;--text:#f3f6fa;--muted:#abb6c4;--border:#526071;--accent:#2476bd;--blue:#56a6ff;--red:#ff6262;--danger:#ff8585;--soft:#23384d}}
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="topbar">
+    <div>
+      <h1>Planejador DVOR offline</h1>
+      <div class="subtitle">Cadastro manual de radiais e acompanhamento da inspeção</div>
+    </div>
+    <div class="toolbar">
+      <button id="new-mission" type="button">Nova missão</button>
+      <button id="import-btn" type="button">Importar JSON</button>
+      <button id="export-btn" type="button">Exportar missão</button>
+      <input id="import-file" type="file" accept="application/json,.json" hidden>
+    </div>
+  </div>
+
+  <section class="panel">
+    <h2>Identificação da missão</h2>
+    <div class="metadata">
+      <label>Localidade / auxílio<input id="mission-name" placeholder="Ex.: Porto Velho - PVH"></label>
+      <label>Número do planejamento<input id="mission-number" placeholder="Ex.: 16"></label>
+      <label>Data<input id="mission-date" type="date"></label>
+    </div>
+  </section>
+
+  <div class="builder">
+    <section class="panel">
+      <h2 id="form-title">Adicionar atividade</h2>
+      <form id="activity-form" novalidate>
+        <div class="type-choice" aria-label="Tipo de atividade">
+          <button id="choose-radial" class="active" type="button">Inserir radial</button>
+          <button id="choose-arc" type="button">Inserir arco DME</button>
+        </div>
+        <div class="form-grid">
+          <input id="activity-type" type="hidden" value="radial">
+          <div id="radial-fields" class="activity-fields">
+            <h3>Dados da radial</h3>
+            <label>Azimute da radial (°)<input id="radial-az" type="number" min="0" max="359.9" step="0.1" inputmode="decimal" placeholder="090"></label>
+            <label>Distância inicial (NM)<input id="radial-start" type="number" min="0" max="500" step="0.1" inputmode="decimal" placeholder="5"></label>
+            <label>Distância final (NM)<input id="radial-end" type="number" min="0" max="500" step="0.1" inputmode="decimal" placeholder="20"></label>
+          </div>
+          <div id="arc-fields" class="activity-fields" hidden>
+            <h3>Dados do arco DME</h3>
+            <label>Azimute inicial (°)<input id="arc-start" type="number" min="0" max="359.9" step="0.1" inputmode="decimal" placeholder="319"></label>
+            <label>Azimute final (°)<input id="arc-end" type="number" min="0" max="359.9" step="0.1" inputmode="decimal" placeholder="056"></label>
+            <label>Raio do arco (NM)<input id="arc-radius" type="number" min="0.1" max="500" step="0.1" inputmode="decimal" placeholder="10,9"></label>
+          </div>
+          <label class="full">Descrição<input id="activity-description" maxlength="100" placeholder="Ex.: RDL de referência, VOR RWY 19, SID DIKAL 3B"></label>
+          <label class="full">Altitude / observações<textarea id="activity-notes" maxlength="180" placeholder="Ex.: 2.300 ft MSL, P2, inbound"></textarea></label>
+          <div class="tx-plan full" aria-label="Transmissores planejados">
+            <label><input id="plan-tx1" type="checkbox" checked> Planejar TX1</label>
+            <label><input id="plan-tx2" type="checkbox" checked> Planejar TX2</label>
+          </div>
+        </div>
+        <div id="form-error" class="error" role="alert"></div>
+        <div class="form-actions">
+          <button class="primary" id="save-activity" type="submit">Adicionar atividade</button>
+          <button id="cancel-edit" type="button" hidden>Cancelar edição</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel rose-panel" id="rose-panel">
+      <div class="rose-toolbar" aria-label="Controles da rosa">
+        <button id="zoom-out" type="button" aria-label="Reduzir zoom">−</button>
+        <span id="zoom-level" class="zoom-level" aria-live="polite">100%</span>
+        <button id="zoom-in" type="button" aria-label="Aumentar zoom">+</button>
+        <button id="zoom-fit" type="button">Ajustar à missão</button>
+        <button id="zoom-fullscreen" type="button">Tela cheia</button>
+      </div>
+      <svg id="rose" viewBox="0 0 500 500" role="img" aria-labelledby="rose-title rose-desc">
+        <title id="rose-title">Rosa de radiais da missão</title>
+        <desc id="rose-desc">Radiais planejadas no TX1 aparecem em azul e no TX2 em vermelho.</desc>
+        <g id="rose-grid"></g><g id="rose-lines"></g>
+      </svg>
+      <div class="legend">
+        <span><span class="swatch blue"></span>TX1</span>
+        <span><span class="swatch red"></span>TX2</span>
+        <span>Feito = cor clara</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="summary">
+      <h2>Atividades da missão</h2>
+      <div><strong id="progress">0/0 TX feitos</strong> · <span id="scale-info" class="muted">Escala: 10 NM</span></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th rowspan="2">Atividade</th><th rowspan="2">Trecho</th><th class="center" colspan="2">TX1</th><th class="center" colspan="2">TX2</th><th rowspan="2">Ações</th></tr>
+          <tr><th class="center">Planejado</th><th class="center">Feito</th><th class="center">Planejado</th><th class="center">Feito</th></tr>
+        </thead>
+        <tbody id="activity-rows"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const STORAGE_KEY='geiv-dvor-manual-offline-v1';
+  const $=selector=>document.querySelector(selector);
+  const svgNS='http://www.w3.org/2000/svg';
+  const center=250, radius=190;
+  let editingId=null, selectedId=null;
+  let mission={metadata:{name:'',number:'',date:''},activities:[]};
+  let viewZoom=1, viewX=center, viewY=center, lastPinch=null;
+  const pointers=new Map();
+
+  function load(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+      if(saved&&saved.metadata&&Array.isArray(saved.activities)) mission=saved;
+    }catch(_){ }
+    $('#mission-name').value=mission.metadata.name||'';
+    $('#mission-number').value=mission.metadata.number||'';
+    $('#mission-date').value=mission.metadata.date||'';
+  }
+  function save(){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(mission));}catch(_){ }
+  }
+  function num(value){const normalized=String(value).trim().replace(',','.');return normalized===''?NaN:Number(normalized);}
+  function fmt(value){return Number(value).toLocaleString('pt-BR',{maximumFractionDigits:1});}
+  function maxDistance(){
+    const values=mission.activities.flatMap(a=>a.type==='arc'?[a.radius]:[a.start,a.end]).filter(Number.isFinite);
+    return values.length?Math.max(...values):10;
+  }
+  function point(bearing,distance,offset=0){
+    const angle=bearing*Math.PI/180, length=radius*distance/maxDistance();
+    return{x:center+length*Math.sin(angle)+offset*Math.cos(angle),y:center-length*Math.cos(angle)+offset*Math.sin(angle)};
+  }
+  function svgEl(name,attrs={}){const node=document.createElementNS(svgNS,name);Object.entries(attrs).forEach(([k,v])=>node.setAttribute(k,v));return node;}
+  function niceRings(max){
+    const steps=[1,2,5,10,20,25,50,100,200,500];
+    const step=steps.find(v=>max/v<=5.5)||max, rings=[];
+    for(let d=step;d<max;d+=step)rings.push(Number(d.toFixed(1)));
+    rings.push(max);return rings;
+  }
+  function drawGrid(){
+    const grid=$('#rose-grid');grid.replaceChildren();const max=maxDistance();
+    niceRings(max).forEach(d=>{const r=radius*d/max;grid.append(svgEl('circle',{cx:center,cy:center,r,class:'grid-circle'}));const t=svgEl('text',{x:center+5,y:center-r+14,class:'grid-label'});t.textContent=`D${fmt(d)}`;grid.append(t);});
+    [[0,-1,'N'],[1,0,'E'],[0,1,'S'],[-1,0,'W']].forEach(([dx,dy,label])=>{grid.append(svgEl('line',{x1:center,y1:center,x2:center+dx*radius,y2:center+dy*radius,class:'axis'}));const t=svgEl('text',{x:center+dx*(radius+17),y:center+dy*(radius+17)+4,'text-anchor':'middle',class:'cardinal'});t.textContent=label;grid.append(t);});
+    grid.append(svgEl('circle',{cx:center,cy:center,r:4,fill:'var(--text)'}));
+  }
+  function arcPath(start,end,distance,offset=0){
+    let finish=end;if(finish<start)finish+=360;const parts=[];
+    for(let b=start;b<=finish;b+=2){const p=point(b%360,distance,offset);parts.push(`${parts.length?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`);}
+    const p=point(end,distance,offset);parts.push(`L${p.x.toFixed(1)},${p.y.toFixed(1)}`);return parts.join(' ');
+  }
+  function duplicateOffset(activity){
+    if(activity.type!=='radial')return 0;
+    const peers=mission.activities.filter(a=>a.type==='radial'&&a.azimuth===activity.azimuth);
+    const index=peers.findIndex(a=>a.id===activity.id);return index>0?index*3:0;
+  }
+  function drawActivity(activity,color,shift,opacity){
+    const group=$('#rose-lines');let mark;
+    if(activity.type==='arc')mark=svgEl('path',{d:arcPath(activity.arcStart,activity.arcEnd,activity.radius,shift),fill:'none',stroke:color,'stroke-width':5,'stroke-linecap':'round',opacity});
+    else{const offset=duplicateOffset(activity)+shift,start=point(activity.azimuth,activity.start,offset),end=point(activity.azimuth,activity.end,offset);mark=svgEl('line',{x1:start.x,y1:start.y,x2:end.x,y2:end.y,stroke:color,'stroke-width':5,'stroke-linecap':'round',opacity});group.append(svgEl('circle',{cx:start.x,cy:start.y,r:3,fill:color,opacity}));}
+    group.append(mark);
+  }
+  function drawLabel(activity){
+    const group=$('#rose-lines');let bearing,distance;
+    if(activity.type==='arc'){let finish=activity.arcEnd;if(finish<activity.arcStart)finish+=360;bearing=((activity.arcStart+finish)/2)%360;distance=activity.radius;}
+    else{bearing=activity.azimuth;distance=Math.max(activity.start,activity.end);}
+    const p=point(bearing,Math.min(maxDistance(),distance+maxDistance()*.045),duplicateOffset(activity));
+    const t=svgEl('text',{x:p.x,y:p.y,'text-anchor':'middle',class:'radial-label'});t.textContent=activity.type==='arc'?`${fmt(activity.arcStart)}°–${fmt(activity.arcEnd)}°`:`${fmt(activity.azimuth)}°`;group.append(t);
+  }
+  function renderRose(){
+    drawGrid();const lines=$('#rose-lines');lines.replaceChildren();
+    mission.activities.forEach(a=>{if(a.tx1Planned)drawActivity(a,'var(--blue)',a.tx2Planned?-2.5:0,a.tx1Done ? .18 : .95);if(a.tx2Planned)drawActivity(a,'var(--red)',a.tx1Planned?2.5:0,a.tx2Done ? .18 : .95);if(a.tx1Planned||a.tx2Planned)drawLabel(a);});
+    $('#scale-info').textContent=`Escala: ${fmt(maxDistance())} NM`;
+  }
+  function segmentText(a){return a.type==='arc'?`Arco ${fmt(a.arcStart)}°→${fmt(a.arcEnd)}° / D${fmt(a.radius)}`:`RDL ${fmt(a.azimuth)}° / D${fmt(a.start)}→D${fmt(a.end)}`;}
+  function checkbox(activity,key,label){
+    const wrapper=document.createElement('label'),input=document.createElement('input');wrapper.setAttribute('aria-label',label);input.type='checkbox';input.checked=Boolean(activity[key]);
+    input.addEventListener('change',()=>{activity[key]=input.checked;if(key.endsWith('Done')&&input.checked){const planned=key.replace('Done','Planned');activity[planned]=true;}if(key.endsWith('Planned')&&!input.checked){const done=key.replace('Planned','Done');activity[done]=false;}save();renderAll();});wrapper.append(input);return wrapper;
+  }
+  function actionButton(text,handler,kind=''){const b=document.createElement('button');b.type='button';b.className=`small ${kind}`;b.textContent=text;b.addEventListener('click',handler);return b;}
+  function renderTable(){
+    const body=$('#activity-rows');body.replaceChildren();
+    if(!mission.activities.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=7;cell.className='empty';cell.textContent='Nenhuma atividade cadastrada.';row.append(cell);body.append(row);}
+    mission.activities.forEach(a=>{
+      const row=document.createElement('tr');row.dataset.id=a.id;if(a.id===selectedId)row.classList.add('selected');
+      const planned=[a.tx1Planned,a.tx2Planned].filter(Boolean).length,done=[a.tx1Planned&&a.tx1Done,a.tx2Planned&&a.tx2Done].filter(Boolean).length;if(planned&&planned===done)row.classList.add('done');
+      const title=document.createElement('td');title.className='activity-title';title.textContent=a.description;
+      const detail=document.createElement('td');detail.className='activity-detail';detail.textContent=segmentText(a)+(a.notes?` · ${a.notes}`:'');row.append(title,detail);
+      [['tx1Planned','TX1 planejado'],['tx1Done','TX1 feito'],['tx2Planned','TX2 planejado'],['tx2Done','TX2 feito']].forEach(([key,label])=>{const cell=document.createElement('td');cell.className='check center';cell.append(checkbox(a,key,`${label}: ${a.description}`));row.append(cell);});
+      const actions=document.createElement('td'),wrap=document.createElement('div');wrap.className='row-actions';wrap.append(actionButton('Editar',()=>editActivity(a.id)),actionButton('Excluir',()=>deleteActivity(a.id),'danger'));actions.append(wrap);row.append(actions);
+      row.addEventListener('click',event=>{if(event.target.closest('input,button'))return;focusActivity(a.id);});body.append(row);
+    });
+    const total=mission.activities.reduce((n,a)=>n+Number(a.tx1Planned)+Number(a.tx2Planned),0),completed=mission.activities.reduce((n,a)=>n+Number(a.tx1Planned&&a.tx1Done)+Number(a.tx2Planned&&a.tx2Done),0);$('#progress').textContent=`${completed}/${total} TX feitos`;
+  }
+  function renderAll(){renderRose();renderTable();applyView();}
+  function setType(type=$('#activity-type').value){
+    const arc=type==='arc';$('#activity-type').value=arc?'arc':'radial';
+    $('#radial-fields').hidden=arc;$('#arc-fields').hidden=!arc;
+    $('#choose-radial').classList.toggle('active',!arc);$('#choose-arc').classList.toggle('active',arc);
+    $('#choose-radial').setAttribute('aria-pressed',String(!arc));$('#choose-arc').setAttribute('aria-pressed',String(arc));
+  }
+  function resetForm(){editingId=null;$('#activity-form').reset();$('#plan-tx1').checked=true;$('#plan-tx2').checked=true;$('#activity-type').value='radial';setType();$('#form-title').textContent='Adicionar atividade';$('#save-activity').textContent='Adicionar atividade';$('#cancel-edit').hidden=true;$('#form-error').textContent='';}
+  function validateActivity(){
+    const type=$('#activity-type').value,description=$('#activity-description').value.trim(),notes=$('#activity-notes').value.trim();if(!description)return{error:'Informe uma descrição para a atividade.'};
+    const base={id:editingId||`a-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,description,notes,tx1Planned:$('#plan-tx1').checked,tx1Done:false,tx2Planned:$('#plan-tx2').checked,tx2Done:false};
+    if(!base.tx1Planned&&!base.tx2Planned)return{error:'Planeje a atividade em pelo menos um transmissor.'};
+    if(type==='radial'){const azimuth=num($('#radial-az').value),start=num($('#radial-start').value),end=num($('#radial-end').value);if(!Number.isFinite(azimuth)||azimuth<0||azimuth>=360)return{error:'O azimute deve estar entre 0° e 359,9°.'};if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<0||start>500||end>500||start===end)return{error:'Informe distâncias inicial e final diferentes, entre 0 e 500 NM.'};return{activity:{...base,azimuth,start,end}};}
+    const arcStart=num($('#arc-start').value),arcEnd=num($('#arc-end').value),radiusNm=num($('#arc-radius').value);if(!Number.isFinite(arcStart)||!Number.isFinite(arcEnd)||arcStart<0||arcStart>=360||arcEnd<0||arcEnd>=360||arcStart===arcEnd)return{error:'Informe azimutes inicial e final válidos e diferentes.'};if(!Number.isFinite(radiusNm)||radiusNm<=0||radiusNm>500)return{error:'O raio do arco deve estar entre 0,1 e 500 NM.'};return{activity:{...base,arcStart,arcEnd,radius:radiusNm}};
+  }
+  function editActivity(id){
+    const a=mission.activities.find(item=>item.id===id);if(!a)return;editingId=id;$('#activity-type').value=a.type;setType();$('#activity-description').value=a.description;$('#activity-notes').value=a.notes||'';$('#plan-tx1').checked=a.tx1Planned;$('#plan-tx2').checked=a.tx2Planned;
+    if(a.type==='radial'){$('#radial-az').value=a.azimuth;$('#radial-start').value=a.start;$('#radial-end').value=a.end;}else{$('#arc-start').value=a.arcStart;$('#arc-end').value=a.arcEnd;$('#arc-radius').value=a.radius;}
+    $('#form-title').textContent='Editar atividade';$('#save-activity').textContent='Salvar alterações';$('#cancel-edit').hidden=false;$('#activity-form').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  function deleteActivity(id){const a=mission.activities.find(item=>item.id===id);if(!a||!confirm(`Excluir “${a.description}”?`))return;mission.activities=mission.activities.filter(item=>item.id!==id);if(editingId===id)resetForm();if(selectedId===id)selectedId=null;save();fitMission();renderAll();}
+  function clampView(){const half=center/viewZoom;viewX=Math.max(half,Math.min(500-half,viewX));viewY=Math.max(half,Math.min(500-half,viewY));}
+  function applyView(){clampView();const size=500/viewZoom;$('#rose').setAttribute('viewBox',`${viewX-size/2} ${viewY-size/2} ${size} ${size}`);$('#zoom-level').textContent=`${Math.round(viewZoom*100)}%`;}
+  function setZoom(value){viewZoom=Math.max(1,Math.min(6,value));if(viewZoom===1){viewX=center;viewY=center;}applyView();}
+  function fitMission(){viewX=center;viewY=center;selectedId=null;setZoom(1);renderTable();}
+  function focusActivity(id){const a=mission.activities.find(item=>item.id===id);if(!a)return;selectedId=id;const distance=a.type==='arc'?a.radius:Math.max(a.start,a.end),target=Math.min(5,Math.max(1,maxDistance()/(distance*1.15)));if(target===1||a.type==='arc'){viewX=center;viewY=center;}else{const p=point(a.azimuth,distance,duplicateOffset(a));viewX=(center+p.x)/2;viewY=(center+p.y)/2;}setZoom(target);renderTable();}
+  function exportMission(){const blob=new Blob([JSON.stringify({...mission,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a'),name=(mission.metadata.name||'missao-dvor').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();link.href=url;link.download=`${name||'missao-dvor'}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function importMission(file){const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!data.metadata||!Array.isArray(data.activities))throw new Error();mission={metadata:data.metadata,activities:data.activities};save();load();resetForm();fitMission();renderAll();}catch(_){alert('Arquivo de missão inválido.');}};reader.readAsText(file);}
+
+  $('#choose-radial').addEventListener('click',()=>setType('radial'));
+  $('#choose-arc').addEventListener('click',()=>setType('arc'));
+  $('#activity-form').addEventListener('submit',event=>{event.preventDefault();const result=validateActivity();if(result.error){$('#form-error').textContent=result.error;return;}const existing=mission.activities.find(a=>a.id===editingId);if(existing){result.activity.tx1Done=existing.tx1Done&&result.activity.tx1Planned;result.activity.tx2Done=existing.tx2Done&&result.activity.tx2Planned;mission.activities=mission.activities.map(a=>a.id===editingId?result.activity:a);}else mission.activities.push(result.activity);save();resetForm();fitMission();renderAll();});
+  $('#cancel-edit').addEventListener('click',resetForm);
+  ['#mission-name','#mission-number','#mission-date'].forEach(selector=>$(selector).addEventListener('input',()=>{mission.metadata={name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value};save();}));
+  $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão e apagar os dados atuais deste aparelho? Exporte a missão antes se desejar conservá-la.'))return;mission={metadata:{name:'',number:'',date:''},activities:[]};save();load();resetForm();fitMission();renderAll();});
+  $('#export-btn').addEventListener('click',exportMission);$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
+  $('#zoom-in').addEventListener('click',()=>setZoom(viewZoom*1.35));$('#zoom-out').addEventListener('click',()=>setZoom(viewZoom/1.35));$('#zoom-fit').addEventListener('click',fitMission);$('#zoom-fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('#rose-panel').requestFullscreen();}catch(_){}});document.addEventListener('fullscreenchange',()=>{$('#zoom-fullscreen').textContent=document.fullscreenElement?'Sair da tela cheia':'Tela cheia';});
+  $('#rose').addEventListener('wheel',event=>{event.preventDefault();setZoom(viewZoom*(event.deltaY<0?1.18:1/1.18));},{passive:false});$('#rose').addEventListener('dblclick',fitMission);
+  $('#rose').addEventListener('pointerdown',event=>{$('#rose').setPointerCapture(event.pointerId);pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});$('#rose').classList.add('dragging');if(pointers.size===2){const p=[...pointers.values()];lastPinch=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);}});
+  $('#rose').addEventListener('pointermove',event=>{const previous=pointers.get(event.pointerId);if(!previous)return;pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});if(pointers.size===1&&viewZoom>1){const rect=$('#rose').getBoundingClientRect(),scale=500/(viewZoom*rect.width);viewX-=(event.clientX-previous.x)*scale;viewY-=(event.clientY-previous.y)*scale;applyView();}else if(pointers.size===2){const p=[...pointers.values()],distance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(lastPinch)setZoom(viewZoom*distance/lastPinch);lastPinch=distance;}});
+  function release(event){pointers.delete(event.pointerId);lastPinch=null;if(!pointers.size)$('#rose').classList.remove('dragging');}$('#rose').addEventListener('pointerup',release);$('#rose').addEventListener('pointercancel',release);
+
+  load();setType();renderAll();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
