@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>IV-PLANNER</title>
-<meta name="iv-planner-build" content="2.9">
+<meta name="iv-planner-build" content="3.0">
 <style>
   :root{color-scheme:light dark;--bg:#eeeeef;--panel:#fafafa;--text:#252629;--muted:#696b70;--border:#b8b9bd;--accent:#b3262d;--blue:#1473e6;--red:#c62830;--danger:#9f1f25;--soft:#e2e2e4}
   *{box-sizing:border-box}
@@ -292,6 +292,12 @@
   .saved-mission-delete{min-width:32px;min-height:32px;padding:2px 7px;font-size:12px}
   .saved-mission-item.current{border-color:var(--accent)}
 
+
+  /* Coordenadas FMS: campos de texto numérico, sem valor/stepper nativo do input number */
+  #station-lat-deg,#station-lat-min,#station-lon-deg,#station-lon-min{
+    appearance:none;-webkit-appearance:none;
+  }
+
 </style>
 </head>
 <body>
@@ -322,16 +328,16 @@
         <div class="coord-box">
           <div class="coord-title">Latitude do auxílio — formato FMS (DD° MM.mm')</div>
           <div class="coord-parts">
-            <label>Graus<input id="station-lat-deg" type="number" min="0" max="90" step="1" inputmode="numeric" placeholder="08"></label>
-            <label>Minutos<input id="station-lat-min" type="number" min="0" max="59.99" step="0.01" inputmode="decimal" placeholder="42.83"></label>
+            <label>Graus<input id="station-lat-deg" type="text" inputmode="numeric" maxlength="2" placeholder="08" autocomplete="off"></label>
+            <label>Minutos<input id="station-lat-min" type="text" inputmode="decimal" maxlength="5" placeholder="42.83" autocomplete="off"></label>
             <label>Hemisfério<select id="station-lat-hemi"><option>N</option><option selected>S</option></select></label>
           </div>
         </div>
         <div class="coord-box">
           <div class="coord-title">Longitude do auxílio — formato FMS (DDD° MM.mm')</div>
           <div class="coord-parts lon">
-            <label>Graus<input id="station-lon-deg" type="number" min="0" max="180" step="1" inputmode="numeric" placeholder="063"></label>
-            <label>Minutos<input id="station-lon-min" type="number" min="0" max="59.99" step="0.01" inputmode="decimal" placeholder="54.20"></label>
+            <label>Graus<input id="station-lon-deg" type="text" inputmode="numeric" maxlength="3" placeholder="063" autocomplete="off"></label>
+            <label>Minutos<input id="station-lon-min" type="text" inputmode="decimal" maxlength="5" placeholder="54.20" autocomplete="off"></label>
             <label>Hemisfério<select id="station-lon-hemi"><option>E</option><option selected>W</option></select></label>
           </div>
         </div>
@@ -630,11 +636,15 @@
   function decimalToFms(value,type){
     const v=Number(value);if(!Number.isFinite(v))return{deg:'',min:'',hemi:type==='lat'?'S':'W'};const abs=Math.abs(v),deg=Math.floor(abs),min=((abs-deg)*60).toFixed(2);return{deg:String(deg).padStart(type==='lat'?2:3,'0'),min,hemi:type==='lat'?(v<0?'S':'N'):(v<0?'W':'E')};
   }
-  function stationCoords(){const lat=fmsToDecimal($('#station-lat-deg').value,$('#station-lat-min').value,$('#station-lat-hemi').value,true),lon=fmsToDecimal($('#station-lon-deg').value,$('#station-lon-min').value,$('#station-lon-hemi').value,false);return Number.isFinite(lat)&&Number.isFinite(lon)?{lat,lon}:null;}
-  function magneticVariation(){
-    const value=num($('#station-magvar').value);
-    if(!Number.isFinite(value)||value<0||value>90)return 0;
-    return $('#station-magvar-hemi').value==='W'?-value:value;
+  function stationCoords(){
+    const num=id=>{const s=String($(id).value||'').trim().replace(',','.');return s===''?NaN:Number(s);};
+    const latDeg=num('#station-lat-deg'),latMin=num('#station-lat-min');
+    const lonDeg=num('#station-lon-deg'),lonMin=num('#station-lon-min');
+    if(![latDeg,latMin,lonDeg,lonMin].every(Number.isFinite))return null;
+    let lat=latDeg+latMin/60,lon=lonDeg+lonMin/60;
+    if($('#station-lat-hemi').value==='S')lat=-lat;
+    if($('#station-lon-hemi').value==='W')lon=-lon;
+    return {lat,lon};
   }
   function trueToMagnetic(trueBearing){return (trueBearing-magneticVariation()+360)%360;}
   function bearingDistance(lat1,lon1,lat2,lon2){
