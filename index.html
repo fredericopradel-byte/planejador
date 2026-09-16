@@ -232,8 +232,10 @@
   .exec-card.is-active{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 70%,transparent);border-color:var(--accent)}
   .exec-card.is-next{box-shadow:0 0 0 1px color-mix(in srgb,var(--text) 35%,transparent)}
   .exec-card.is-done{opacity:.35}
-  .exec-card.dragging{opacity:.7;transform:scale(.99);z-index:5}
-  .exec-card.longpress-ready{box-shadow:0 8px 24px rgba(0,0,0,.38),0 0 0 2px color-mix(in srgb,var(--text) 65%,transparent);transform:scale(1.015);position:relative;z-index:20}
+  .exec-card.dragging{opacity:.94;z-index:1000;transition:box-shadow .14s,opacity .14s;will-change:left,top;cursor:grabbing}
+  .exec-card.longpress-ready{box-shadow:0 14px 34px rgba(0,0,0,.46),0 0 0 2px color-mix(in srgb,var(--text) 65%,transparent)}
+  .exec-placeholder{border:1px dashed color-mix(in srgb,var(--accent) 55%,var(--border));border-radius:11px;background:color-mix(in srgb,var(--accent) 7%,transparent)}
+  .exec-card.reflowing{transition:transform .18s cubic-bezier(.2,.8,.2,1),opacity .15s,border-color .15s,box-shadow .15s}
   .exec-card{touch-action:pan-y;-webkit-user-select:none;user-select:none}
   .execution-list.reordering{touch-action:none;overscroll-behavior:contain}
   .exec-card button{touch-action:manipulation}
@@ -822,13 +824,28 @@
     const ids=[...$('#execution-list').querySelectorAll('.exec-card')].map(x=>x.dataset.id);
     mission.activities.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));save();
   }
+  function animateExecutionReflow(change){
+    const cards=[...$('#execution-list').querySelectorAll('.exec-card:not(.dragging)')];
+    const before=new Map(cards.map(el=>[el,el.getBoundingClientRect().top]));
+    change();
+    cards.forEach(el=>{
+      const dy=before.get(el)-el.getBoundingClientRect().top;if(!dy)return;
+      el.classList.add('reflowing');el.style.transform=`translateY(${dy}px)`;
+      void el.offsetWidth;
+      requestAnimationFrame(()=>{el.style.transform='';});
+      el.addEventListener('transitionend',()=>el.classList.remove('reflowing'),{once:true});
+    });
+  }
   function moveDraggedCard(card,x,y){
-    card.style.pointerEvents='none';
-    const target=document.elementFromPoint(x,y)?.closest('.exec-card');
-    card.style.pointerEvents='';
-    if(!target||target===card)return;
-    const list=$('#execution-list'),rect=target.getBoundingClientRect();
-    list.insertBefore(card,y<rect.top+rect.height/2?target:target.nextSibling);
+    if(!dragState)return;
+    card.style.left=`${x-dragState.offsetX}px`;
+    card.style.top=`${y-dragState.offsetY}px`;
+    const target=document.elementsFromPoint(x,y).map(el=>el.closest?.('.exec-card')).find(el=>el&&el!==card);
+    if(!target)return;
+    const placeholder=dragState.placeholder,rect=target.getBoundingClientRect();
+    const reference=y<rect.top+rect.height/2?target:target.nextSibling;
+    if(reference===placeholder||reference===placeholder.nextSibling)return;
+    animateExecutionReflow(()=>$('#execution-list').insertBefore(placeholder,reference));
   }
   function neutralPoint(target){
     return !target.closest('button,input,select,textarea,a,label');
@@ -841,9 +858,14 @@
 
     const arm=(x,y)=>{
       armed=true;suppressClick=true;lastX=x;lastY=y;
-      dragState={card};
+      const rect=card.getBoundingClientRect(),placeholder=document.createElement('div');
+      placeholder.className='exec-placeholder';placeholder.style.height=`${rect.height}px`;
+      card.before(placeholder);
+      dragState={card,placeholder,offsetX:x-rect.left,offsetY:y-rect.top};
       $('#execution-list').classList.add('reordering');
       card.classList.add('dragging','longpress-ready');
+      Object.assign(card.style,{position:'fixed',left:`${rect.left}px`,top:`${rect.top}px`,width:`${rect.width}px`,height:`${rect.height}px`,margin:'0'});
+      document.body.append(card);
       if(navigator.vibrate)navigator.vibrate(25);
     };
 
@@ -851,6 +873,9 @@
       clearArm();
       if(armed){
         armed=false;
+        const placeholder=dragState?.placeholder;
+        if(placeholder)placeholder.replaceWith(card);
+        card.removeAttribute('style');
         card.classList.remove('dragging','longpress-ready');
         $('#execution-list').classList.remove('reordering');
         dragState=null;
@@ -865,7 +890,7 @@
       const t=e.touches[0];
       startX=lastX=t.clientX;startY=lastY=t.clientY;
       clearArm();
-      timer=setTimeout(()=>arm(lastX,lastY),1000);
+      timer=setTimeout(()=>arm(lastX,lastY),650);
     },{passive:true});
 
     card.addEventListener('touchmove',e=>{
@@ -882,11 +907,11 @@
     card.addEventListener('touchend',finish,{passive:true});
     card.addEventListener('touchcancel',finish,{passive:true});
 
-    // Desktop: same idea with mouse — hold for 1 s on a neutral area, then drag.
+    // Desktop: mesma interação com o mouse.
     card.addEventListener('pointerdown',e=>{
       if(e.pointerType!=='mouse'||e.button!==0||!neutralPoint(e.target))return;
       startX=lastX=e.clientX;startY=lastY=e.clientY;
-      clearArm();timer=setTimeout(()=>arm(lastX,lastY),1000);
+      clearArm();timer=setTimeout(()=>arm(lastX,lastY),650);
     });
     card.addEventListener('pointermove',e=>{
       if(e.pointerType!=='mouse')return;
@@ -964,7 +989,7 @@
   }
   function openSavedMission(id){
     const found=getMissionLibrary().find(x=>x.savedMissionId===id);if(!found)return;
-    mission=JSON.parse(JSON.stringify(found));migrateActivities();save();load();resetForm();fitMission();renderAll();showPage('mission');
+    mission=JSON.parse(JSON.stringify(found));migrateActivities();save();load();resetForm();fitMission();renderAll();renderSavedMissions();showPage('mission');
   }
   function deleteSavedMission(id){
     if(!confirm('Excluir esta missão da lista de missões salvas?'))return;
