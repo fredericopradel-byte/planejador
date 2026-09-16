@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>IV-PLANNER</title>
-<meta name="iv-planner-build" content="2.9">
+<meta name="iv-planner-build" content="3.0-gnssfix">
 <style>
   :root{color-scheme:light dark;--bg:#eeeeef;--panel:#fafafa;--text:#252629;--muted:#696b70;--border:#b8b9bd;--accent:#b3262d;--blue:#1473e6;--red:#c62830;--danger:#9f1f25;--soft:#e2e2e4}
   *{box-sizing:border-box}
@@ -116,7 +116,7 @@
     label>input,label>select,label>textarea{margin-top:2px}
 
     /* MISSÃO: usa largura horizontal sem empilhar tudo */
-    #page-mission .metadata{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+    #page-mission .metadata{display:grid;grid-template-columns:1.35fr .65fr;gap:6px}
     #page-mission .metadata label{min-width:0}
     #page-mission .metadata label:first-child{grid-column:1/-1}
     #page-mission .metadata label:last-child{grid-column:auto}
@@ -258,9 +258,10 @@
   }
 
   @media (max-width:570px){
-    #page-mission .metadata{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+    #page-mission .metadata{grid-template-columns:1.35fr .65fr!important}
     #page-mission .metadata label{min-width:0}
-    #mission-date{font-size:13px!important;padding-left:6px!important;padding-right:3px!important}
+    #page-mission .metadata>label:last-child{min-width:0;overflow:hidden;padding-right:3px}
+    #mission-date{display:block;inline-size:100%!important;width:100%!important;max-inline-size:100%!important;max-width:100%!important;min-inline-size:0!important;min-width:0!important;box-sizing:border-box!important;font-size:13px!important;padding-left:6px!important;padding-right:3px!important}
     .rose-toolbar{grid-template-columns:34px 40px 34px 1fr 1fr 1fr 1fr!important}
     .rose-toolbar button{font-size:9px!important;padding:3px!important}
     .flight-step-panel{grid-template-columns:1fr auto;gap:5px;padding:6px}
@@ -292,6 +293,12 @@
   .saved-mission-delete{min-width:32px;min-height:32px;padding:2px 7px;font-size:12px}
   .saved-mission-item.current{border-color:var(--accent)}
 
+
+  /* Coordenadas FMS: campos de texto numérico, sem valor/stepper nativo do input number */
+  #station-lat-deg,#station-lat-min,#station-lon-deg,#station-lon-min{
+    appearance:none;-webkit-appearance:none;
+  }
+
 </style>
 </head>
 <body>
@@ -316,22 +323,22 @@
       <div class="metadata">
         <label>Localidade / auxílio<input id="mission-name" placeholder="Ex.: Porto Velho - PVH"></label>
         <label>Número do planejamento<input id="mission-number" placeholder="Ex.: 16"></label>
-        <label>Data<input id="mission-date" type="date"></label>
+        <label>Data<input id="mission-date" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" autocomplete="off"></label>
       </div>
       <div class="gnss-grid">
         <div class="coord-box">
           <div class="coord-title">Latitude do auxílio — formato FMS (DD° MM.mm')</div>
           <div class="coord-parts">
-            <label>Graus<input id="station-lat-deg" type="number" min="0" max="90" step="1" inputmode="numeric" placeholder="08"></label>
-            <label>Minutos<input id="station-lat-min" type="number" min="0" max="59.99" step="0.01" inputmode="decimal" placeholder="42.83"></label>
+            <label>Graus<input id="station-lat-deg" type="text" inputmode="numeric" maxlength="2" placeholder="08" autocomplete="off"></label>
+            <label>Minutos<input id="station-lat-min" type="text" inputmode="decimal" maxlength="5" placeholder="42.83" autocomplete="off"></label>
             <label>Hemisfério<select id="station-lat-hemi"><option>N</option><option selected>S</option></select></label>
           </div>
         </div>
         <div class="coord-box">
           <div class="coord-title">Longitude do auxílio — formato FMS (DDD° MM.mm')</div>
           <div class="coord-parts lon">
-            <label>Graus<input id="station-lon-deg" type="number" min="0" max="180" step="1" inputmode="numeric" placeholder="063"></label>
-            <label>Minutos<input id="station-lon-min" type="number" min="0" max="59.99" step="0.01" inputmode="decimal" placeholder="54.20"></label>
+            <label>Graus<input id="station-lon-deg" type="text" inputmode="numeric" maxlength="3" placeholder="063" autocomplete="off"></label>
+            <label>Minutos<input id="station-lon-min" type="text" inputmode="decimal" maxlength="5" placeholder="54.20" autocomplete="off"></label>
             <label>Hemisfério<select id="station-lon-hemi"><option>E</option><option selected>W</option></select></label>
           </div>
         </div>
@@ -353,7 +360,8 @@
       <div class="mission-actions">
         <button id="new-mission" type="button">Nova missão</button>
         <button id="import-btn" type="button">Importar missão</button>
-        <button class="primary" id="save-mission" type="button">Salvar missão</button>
+        <button id="save-mission" type="button">Salvar missão</button>
+        <button class="primary" id="mission-ok" type="button">OK</button>
         <input id="import-file" type="file" accept="application/json,.json" hidden>
       </div>
     </section>
@@ -521,6 +529,18 @@
   }
 
 
+  function formatDateBR(value){
+    const v=String(value||'').trim();
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(v))return v;
+    const m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m?`${m[3]}/${m[2]}/${m[1]}`:v;
+  }
+  function maskDateBR(value){
+    const d=String(value||'').replace(/\D/g,'').slice(0,8);
+    if(d.length<=2)return d;
+    if(d.length<=4)return `${d.slice(0,2)}/${d.slice(2)}`;
+    return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`;
+  }
   function load(){
     try{
       const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
@@ -529,8 +549,8 @@
     }catch(_){ }
     $('#mission-name').value=mission.metadata.name||'';
     $('#mission-number').value=mission.metadata.number||'';
-    $('#mission-date').value=mission.metadata.date||'';
-    const latParts=decimalToFms(mission.metadata.stationLat,'lat'),lonParts=decimalToFms(mission.metadata.stationLon,'lon');
+    $('#mission-date').value=formatDateBR(mission.metadata.date||'');
+    const latParts=decimalToFmsOrBlank(mission.metadata.stationLat,'lat'),lonParts=decimalToFmsOrBlank(mission.metadata.stationLon,'lon');
     $('#station-lat-deg').value=latParts.deg;$('#station-lat-min').value=latParts.min;$('#station-lat-hemi').value=latParts.hemi;
     $('#station-lon-deg').value=lonParts.deg;$('#station-lon-min').value=lonParts.min;$('#station-lon-hemi').value=lonParts.hemi;
     $('#station-magvar').value=mission.metadata.magVar??'';
@@ -604,9 +624,10 @@
     mission.activities.forEach(a=>{
       const color=a.tx==='TX2'?'var(--red)':'var(--blue)';
       const active=a.id===mission.activeId, upcoming=nxt&&a.id===nxt.id;
-      const opacity=a.done?.25:(active?1:(upcoming?.88:.50));
-      const width=active?11:(upcoming?6:4);
-      drawActivity(a,color,0,opacity,width,Boolean(upcoming&&!a.done));
+      const opacity=active?1:(a.done?.25:(upcoming?.88:.50));
+      // A passagem ativa permanece em destaque; todas as demais têm a mesma espessura da rosa dos ventos.
+      const width=active?7:1;
+      drawActivity(a,color,0,opacity,width,false);
       drawLabel(a);
     });
     drawAircraft();
@@ -620,21 +641,25 @@
     const sign=(hemi==='S'||hemi==='W')?-1:1;return sign*(deg+min/60);
   }
 
-  function decimalToFmsOrBlank(value,isLon=false){
+  function decimalToFmsOrBlank(value,type){
     if(value===''||value===null||value===undefined||!Number.isFinite(Number(value))){
-      return {deg:'',min:'',hemi:isLon?'W':'S'};
+      return {deg:'',min:'',hemi:type==='lon'?'W':'S'};
     }
-    return decimalToFms(Number(value),isLon);
+    return decimalToFms(Number(value),type);
   }
 
   function decimalToFms(value,type){
     const v=Number(value);if(!Number.isFinite(v))return{deg:'',min:'',hemi:type==='lat'?'S':'W'};const abs=Math.abs(v),deg=Math.floor(abs),min=((abs-deg)*60).toFixed(2);return{deg:String(deg).padStart(type==='lat'?2:3,'0'),min,hemi:type==='lat'?(v<0?'S':'N'):(v<0?'W':'E')};
   }
-  function stationCoords(){const lat=fmsToDecimal($('#station-lat-deg').value,$('#station-lat-min').value,$('#station-lat-hemi').value,true),lon=fmsToDecimal($('#station-lon-deg').value,$('#station-lon-min').value,$('#station-lon-hemi').value,false);return Number.isFinite(lat)&&Number.isFinite(lon)?{lat,lon}:null;}
-  function magneticVariation(){
-    const value=num($('#station-magvar').value);
-    if(!Number.isFinite(value)||value<0||value>90)return 0;
-    return $('#station-magvar-hemi').value==='W'?-value:value;
+  function stationCoords(){
+    const num=id=>{const s=String($(id).value||'').trim().replace(',','.');return s===''?NaN:Number(s);};
+    const latDeg=num('#station-lat-deg'),latMin=num('#station-lat-min');
+    const lonDeg=num('#station-lon-deg'),lonMin=num('#station-lon-min');
+    if(![latDeg,latMin,lonDeg,lonMin].every(Number.isFinite))return null;
+    let lat=latDeg+latMin/60,lon=lonDeg+lonMin/60;
+    if($('#station-lat-hemi').value==='S')lat=-lat;
+    if($('#station-lon-hemi').value==='W')lon=-lon;
+    return {lat,lon};
   }
   function trueToMagnetic(trueBearing){return (trueBearing-magneticVariation()+360)%360;}
   function bearingDistance(lat1,lon1,lat2,lon2){
@@ -978,9 +1003,10 @@
     save();resetForm();fitMission();renderAll();
   });
   $('#cancel-edit').addEventListener('click',resetForm);
+  $('#mission-date').addEventListener('input',e=>{const pos=e.target.selectionStart;e.target.value=maskDateBR(e.target.value);});
   ['#mission-name','#mission-number','#mission-date','#station-lat-deg','#station-lat-min','#station-lat-hemi','#station-lon-deg','#station-lon-min','#station-lon-hemi','#station-magvar','#station-magvar-hemi'].forEach(selector=>$(selector).addEventListener('input',()=>{const st=stationCoords();mission.metadata={name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value,stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};save();if(lastPosition){updateGnssReadout();drawAircraft();}}));
   $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão? A missão atual continuará na lista somente se tiver sido salva.'))return;mission={savedMissionId:null,metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};save();load();resetForm();fitMission();renderAll();renderSavedMissions();});
-  $('#save-mission').addEventListener('click',saveMissionToLibrary);$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
+  $('#save-mission').addEventListener('click',saveMissionToLibrary);$('#mission-ok').addEventListener('click',()=>showPage('plan'));$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
   document.querySelectorAll('[data-plan-dir]').forEach(b=>b.addEventListener('click',()=>setPlanDirection(b.dataset.planDir)));
   syncPlanDirectionUI();
   $('#gnss-toggle').addEventListener('click',toggleGnss);
