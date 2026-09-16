@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#b3262d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -10,6 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>IV-PLANNER</title>
+<meta name="iv-planner-build" content="3.0">
 <style>
   :root{color-scheme:light dark;--bg:#eeeeef;--panel:#fafafa;--text:#252629;--muted:#696b70;--border:#b8b9bd;--accent:#b3262d;--blue:#1473e6;--red:#c62830;--danger:#9f1f25;--soft:#e2e2e4}
   *{box-sizing:border-box}
@@ -115,9 +116,11 @@
     label>input,label>select,label>textarea{margin-top:2px}
 
     /* MISSÃO: usa largura horizontal sem empilhar tudo */
-    #page-mission .metadata{display:grid;grid-template-columns:1.35fr .65fr;gap:6px}
+    #page-mission .metadata{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+    #page-mission .metadata label{min-width:0}
     #page-mission .metadata label:first-child{grid-column:1/-1}
     #page-mission .metadata label:last-child{grid-column:auto}
+    #mission-date{width:100%;min-width:0;max-width:100%;font-size:14px;padding-left:7px;padding-right:5px}
     .gnss-grid{display:grid;grid-template-columns:1fr;gap:6px;margin-top:7px}
     .coord-box{padding:7px;border-radius:8px}
     .coord-title{font-size:11px;margin-bottom:4px;line-height:1.15}
@@ -201,10 +204,98 @@
     #rose{min-height:235px;height:calc(100dvh - 225px)}
   }
 
-  /* iPhone/Safari: pequena folga física para o controle nativo de data não tocar a borda */
+  /* IV-PLANNER — execução operacional v2 */
+  #mission-date{box-sizing:border-box;width:100%;min-width:0;max-width:100%}
+  .metadata>label{min-width:0}
+
+  .flight-step-panel{display:grid;grid-template-columns:1.2fr 1fr auto;gap:8px;align-items:center;
+    padding:8px 10px;margin:6px 0;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
+  .step-now,.step-next{min-width:0;display:flex;flex-direction:column;gap:2px}
+  .step-kicker{font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--muted)}
+  #active-step-text,#next-step-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
+  .step-now.active-tx1{border-left:4px solid var(--blue);padding-left:7px}
+  .step-now.active-tx2{border-left:4px solid var(--red);padding-left:7px}
+  .step-controls{display:grid;grid-template-columns:34px auto 34px 34px;gap:4px;align-items:center}
+  .step-controls button{min-height:34px;padding:4px 7px;font-size:11px;font-weight:800}
+  .step-controls #step-prev,.step-controls #step-next,.step-controls #step-undo{font-size:17px;padding:2px}
+
+  .direction-plan-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:5px 0 8px}.direction-plan-row .hint{font-size:10px;color:var(--muted)}
+  .direction-choice{display:inline-flex;gap:3px;align-items:center}
+  .direction-choice button{min-width:34px;min-height:30px;padding:3px 7px;font-size:10px;font-weight:800}
+  .direction-choice button.selected{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .direction-choice .curve{font-size:17px;line-height:1;padding:2px 7px}
+  .execution-list{display:flex;flex-direction:column;gap:8px}
+  .exec-card{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+    border:1px solid var(--border);border-radius:11px;padding:9px;background:var(--panel);
+    transition:opacity .15s,border-color .15s,box-shadow .15s,transform .15s}
+  .exec-card.is-active{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 70%,transparent);border-color:var(--accent)}
+  .exec-card.is-next{box-shadow:0 0 0 1px color-mix(in srgb,var(--text) 35%,transparent)}
+  .exec-card.is-done{opacity:.35}
+  .exec-card.dragging{opacity:.7;transform:scale(.99);z-index:5}
+  .exec-card.longpress-ready{box-shadow:0 8px 24px rgba(0,0,0,.38),0 0 0 2px color-mix(in srgb,var(--text) 65%,transparent);transform:scale(1.015);position:relative;z-index:20}
+  .exec-card{touch-action:pan-y;-webkit-user-select:none;user-select:none}
+  .execution-list.reordering{touch-action:none;overscroll-behavior:contain}
+  .exec-card button{touch-action:manipulation}
+  .exec-main{min-width:0}
+  .exec-head{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .exec-number{font-size:11px;font-weight:800;color:var(--muted)}
+  .tx-badge{font-size:10px;font-weight:800;color:#fff;border-radius:999px;padding:3px 7px}
+  .tx-badge.tx1{background:var(--blue)} .tx-badge.tx2{background:var(--red)}
+  .state-badge{font-size:9px;font-weight:800;border:1px solid var(--border);border-radius:999px;padding:2px 6px}
+  .exec-title{font-weight:700;font-size:14px;margin-top:4px}
+  .exec-detail{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.25}
+  .exec-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .exec-actions button{font-size:10px;padding:5px 7px;min-height:34px}
+
+  /* Tablet também usa navegação inferior */
+  @media (max-width:1100px){
+    .app{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
+    .page-nav{position:fixed;left:0;right:0;bottom:0;top:auto;margin:0;
+      padding:7px 10px calc(7px + env(safe-area-inset-bottom));background:var(--panel);
+      border-top:1px solid var(--border);z-index:100;gap:6px;box-shadow:0 -3px 12px rgba(0,0,0,.10)}
+    .page-nav button{min-height:48px;border:0;background:transparent}
+    .page-nav button.active{background:var(--accent);color:#fff;border-radius:10px}
+  }
+
   @media (max-width:570px){
-    #page-mission .metadata>label:last-child{min-width:0;overflow:hidden;padding-right:3px}
-    #mission-date{display:block;inline-size:100%!important;width:100%!important;max-inline-size:100%!important;max-width:100%!important;min-inline-size:0!important;min-width:0!important;box-sizing:border-box!important}
+    #page-mission .metadata{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+    #page-mission .metadata label{min-width:0}
+    #mission-date{font-size:13px!important;padding-left:6px!important;padding-right:3px!important}
+    .rose-toolbar{grid-template-columns:34px 40px 34px 1fr 1fr 1fr 1fr!important}
+    .rose-toolbar button{font-size:9px!important;padding:3px!important}
+    .flight-step-panel{grid-template-columns:1fr auto;gap:5px;padding:6px}
+    .step-next{grid-column:1}
+    .step-controls{grid-column:2;grid-row:1/3;grid-template-columns:28px auto 28px 28px;gap:3px}
+    .step-controls button{min-height:42px;padding:3px 5px;font-size:9px}
+    .step-controls #step-prev,.step-controls #step-next,.step-controls #step-undo{font-size:16px}
+    #active-step-text,#next-step-text{font-size:10px}
+    .exec-card{grid-template-columns:1fr;gap:5px;padding:7px}
+    .exec-actions{grid-column:1;justify-content:flex-start}
+  }
+
+
+  /* Direção: IN/OUT exclusivamente para radiais; setas exclusivamente para arcos */
+  #plan-radial-direction[hidden],#plan-arc-direction[hidden]{display:none!important}
+
+
+  #export-mission{background:var(--panel)!important;color:var(--text)!important;border:1px solid var(--border)!important}
+
+
+  .saved-missions{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+  .saved-missions-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:7px}
+  .saved-missions-head strong{font-size:13px}.saved-missions-head .muted{font-size:9px}
+  .saved-missions-list{display:flex;flex-direction:column;gap:5px}
+  .saved-mission-item{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;border:1px solid var(--border);
+    border-radius:8px;padding:6px 7px;background:var(--bg)}
+  .saved-mission-open{border:0;background:transparent;color:var(--text);padding:2px;text-align:left;min-height:34px}
+  .saved-mission-open strong{display:block;font-size:12px}.saved-mission-open span{display:block;font-size:9px;color:var(--muted);margin-top:2px}
+  .saved-mission-delete{min-width:32px;min-height:32px;padding:2px 7px;font-size:12px}
+  .saved-mission-item.current{border-color:var(--accent)}
+
+
+  /* Coordenadas FMS: campos de texto numérico, sem valor/stepper nativo do input number */
+  #station-lat-deg,#station-lat-min,#station-lon-deg,#station-lon-min{
+    appearance:none;-webkit-appearance:none;
   }
 
 </style>
@@ -237,16 +328,16 @@
         <div class="coord-box">
           <div class="coord-title">Latitude do auxílio — formato FMS (DD° MM.mm')</div>
           <div class="coord-parts">
-            <label>Graus<input id="station-lat-deg" type="number" min="0" max="90" step="1" inputmode="numeric" placeholder="08"></label>
-            <label>Minutos<input id="station-lat-min" type="number" min="0" max="59.99" step="0.01" inputmode="decimal" placeholder="42.83"></label>
+            <label>Graus<input id="station-lat-deg" type="text" inputmode="numeric" maxlength="2" placeholder="08" autocomplete="off"></label>
+            <label>Minutos<input id="station-lat-min" type="text" inputmode="decimal" maxlength="5" placeholder="42.83" autocomplete="off"></label>
             <label>Hemisfério<select id="station-lat-hemi"><option>N</option><option selected>S</option></select></label>
           </div>
         </div>
         <div class="coord-box">
           <div class="coord-title">Longitude do auxílio — formato FMS (DDD° MM.mm')</div>
           <div class="coord-parts lon">
-            <label>Graus<input id="station-lon-deg" type="number" min="0" max="180" step="1" inputmode="numeric" placeholder="063"></label>
-            <label>Minutos<input id="station-lon-min" type="number" min="0" max="59.99" step="0.01" inputmode="decimal" placeholder="54.20"></label>
+            <label>Graus<input id="station-lon-deg" type="text" inputmode="numeric" maxlength="3" placeholder="063" autocomplete="off"></label>
+            <label>Minutos<input id="station-lon-min" type="text" inputmode="decimal" maxlength="5" placeholder="54.20" autocomplete="off"></label>
             <label>Hemisfério<select id="station-lon-hemi"><option>E</option><option selected>W</option></select></label>
           </div>
         </div>
@@ -258,10 +349,17 @@
           </div>
         </div>
       </div>
+      <div class="saved-missions">
+        <div class="saved-missions-head">
+          <strong>Missões salvas</strong>
+          <span class="muted">Acesso rápido neste aparelho</span>
+        </div>
+        <div id="saved-missions-list" class="saved-missions-list"></div>
+      </div>
       <div class="mission-actions">
         <button id="new-mission" type="button">Nova missão</button>
         <button id="import-btn" type="button">Importar missão</button>
-        <button class="primary" id="export-btn" type="button">Exportar missão</button>
+        <button class="primary" id="save-mission" type="button">Salvar missão</button>
         <input id="import-file" type="file" accept="application/json,.json" hidden>
       </div>
     </section>
@@ -277,7 +375,18 @@
         </div>
         <div class="form-grid">
           <input id="activity-type" type="hidden" value="radial">
-          <div id="radial-fields" class="activity-fields">
+          <div class="direction-plan-row">
+        <span class="hint">Direção voada:</span>
+        <div id="plan-radial-direction" class="direction-choice">
+          <button type="button" class="small selected" data-plan-dir="inbound">IN</button>
+          <button type="button" class="small" data-plan-dir="outbound">OUT</button>
+        </div>
+        <div id="plan-arc-direction" class="direction-choice" hidden>
+          <button type="button" class="small curve selected" data-plan-dir="cw" title="Horário">↻</button>
+          <button type="button" class="small curve" data-plan-dir="ccw" title="Anti-horário">↺</button>
+        </div>
+      </div>
+      <div id="radial-fields" class="activity-fields">
             <h3>Dados da radial</h3>
             <label>Azimute da radial (°)<input id="radial-az" type="number" min="0" max="359.9" step="0.1" inputmode="decimal" placeholder="090"></label>
             <label>Distância inicial (NM)<input id="radial-start" type="number" min="0" max="500" step="0.1" inputmode="decimal" placeholder="5"></label>
@@ -317,6 +426,24 @@
         <button id="zoom-in" type="button" aria-label="Aumentar zoom">+</button>
         <button id="zoom-fit" type="button">Ajustar à missão</button>
         <button id="zoom-fullscreen" type="button">Tela cheia</button>
+        <button id="center-aircraft" type="button" title="Centralizar na aeronave">✈ ANV</button>
+        <button id="center-aid" type="button" title="Centralizar no auxílio">◎ AUX</button>
+      </div>
+      <div class="flight-step-panel" id="flight-step-panel">
+        <div class="step-now">
+          <span class="step-kicker">ATUAL</span>
+          <strong id="active-step-text">Nenhuma etapa ativa</strong>
+        </div>
+        <div class="step-next">
+          <span class="step-kicker">PRÓXIMA</span>
+          <span id="next-step-text">—</span>
+        </div>
+        <div class="step-controls" aria-label="Controles da etapa ativa">
+          <button id="step-prev" type="button" title="Etapa anterior">←</button>
+          <button class="primary" id="step-complete" type="button">Concluir</button>
+          <button id="step-next" type="button" title="Próxima etapa">→</button>
+          <button id="step-undo" type="button" title="Desfazer última conclusão">↶</button>
+        </div>
       </div>
       <div class="gnss-status">
         <button class="primary" id="gnss-toggle" type="button">Ativar posição GNSS</button>
@@ -331,7 +458,7 @@
       <div class="legend">
         <span><span class="swatch blue"></span>TX1</span>
         <span><span class="swatch red"></span>TX2</span>
-        <span>Feito = cor clara</span>
+        <span>Ativa = espessa</span><span>Próxima = halo</span><span>Concluída = apagada</span>
       </div>
     </section>
   </section>
@@ -342,15 +469,7 @@
         <h2>Execução da missão</h2>
         <div><strong id="progress">0/0 TX feitos</strong></div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr><th rowspan="2">Atividade</th><th rowspan="2">Trecho</th><th class="center" colspan="2">TX1</th><th class="center" colspan="2">TX2</th><th rowspan="2">Ações</th></tr>
-            <tr><th class="center">Planejado</th><th class="center">Feito</th><th class="center">Planejado</th><th class="center">Feito</th></tr>
-          </thead>
-          <tbody id="activity-rows"></tbody>
-        </table>
-      </div>
+      <div id="execution-list" class="execution-list" aria-live="polite"></div>
     </section>
   </section>
 </main>
@@ -358,15 +477,46 @@
 <script>
 (() => {
   const STORAGE_KEY='geiv-dvor-manual-offline-v1';
+  const MISSIONS_LIBRARY_KEY='iv-planner-saved-missions-v1';
   const $=selector=>document.querySelector(selector);
   const svgNS='http://www.w3.org/2000/svg';
   const center=250, radius=190;
   let editingId=null, selectedId=null;
-  let mission={metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[]};
+  let mission={savedMissionId:null,metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};
   let viewZoom=1, viewX=center, viewY=center, lastPinch=null;
   const pointers=new Map();
   let currentPage='mission';
   let gnssWatchId=null, lastPosition=null;
+  let dragState=null;
+  let completionHistory=[];
+  let planDirection='inbound';
+
+  function migrateActivities(){
+    const out=[];
+    (mission.activities||[]).forEach(a=>{
+      if(a.tx==='TX1'||a.tx==='TX2'){
+        out.push({...a,done:Boolean(a.done),direction:a.direction||(a.type==='arc'?'cw':'inbound')});
+        return;
+      }
+      if(a.tx1Planned) out.push({...a,id:`${a.id}-tx1`,sourceId:a.id,tx:'TX1',done:Boolean(a.tx1Done),direction:a.direction||(a.type==='arc'?'cw':'inbound')});
+      if(a.tx2Planned) out.push({...a,id:`${a.id}-tx2`,sourceId:a.id,tx:'TX2',done:Boolean(a.tx2Done),direction:a.direction||(a.type==='arc'?'cw':'inbound')});
+    });
+    mission.activities=out;
+    if(!mission.activeId || !mission.activities.some(a=>a.id===mission.activeId && !a.done)){
+      mission.activeId=(mission.activities.find(a=>!a.done)||{}).id||null;
+    }
+  }
+  function activeIndex(){return mission.activities.findIndex(a=>a.id===mission.activeId);}
+  function activeStep(){return mission.activities[activeIndex()]||null;}
+  function nextStep(){
+    const i=activeIndex();
+    if(i<0)return mission.activities.find(a=>!a.done)||null;
+    return mission.activities.slice(i+1).find(a=>!a.done)||mission.activities.find((a,j)=>j<i&&!a.done)||null;
+  }
+  function ensureActive(){
+    const a=activeStep();
+    if(!a || a.done) mission.activeId=(mission.activities.find(x=>!x.done)||{}).id||null;
+  }
   function showPage(page){
     currentPage=page;
     document.querySelectorAll('.app-page').forEach(el=>el.hidden=el.id!==`page-${page}`);
@@ -381,11 +531,12 @@
     try{
       const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
       if(saved&&saved.metadata&&Array.isArray(saved.activities)) mission=saved;
+      migrateActivities();
     }catch(_){ }
     $('#mission-name').value=mission.metadata.name||'';
     $('#mission-number').value=mission.metadata.number||'';
     $('#mission-date').value=mission.metadata.date||'';
-    const latParts=decimalToFmsOrBlank(mission.metadata.stationLat,'lat'),lonParts=decimalToFmsOrBlank(mission.metadata.stationLon,'lon');
+    const latParts=decimalToFms(mission.metadata.stationLat,'lat'),lonParts=decimalToFms(mission.metadata.stationLon,'lon');
     $('#station-lat-deg').value=latParts.deg;$('#station-lat-min').value=latParts.min;$('#station-lat-hemi').value=latParts.hemi;
     $('#station-lon-deg').value=lonParts.deg;$('#station-lon-min').value=lonParts.min;$('#station-lon-hemi').value=lonParts.hemi;
     $('#station-magvar').value=mission.metadata.magVar??'';
@@ -423,14 +574,27 @@
     const p=point(end,distance,offset);parts.push(`L${p.x.toFixed(1)},${p.y.toFixed(1)}`);return parts.join(' ');
   }
   function duplicateOffset(activity){
-    if(activity.type!=='radial')return 0;
-    const peers=mission.activities.filter(a=>a.type==='radial'&&a.azimuth===activity.azimuth);
-    const index=peers.findIndex(a=>a.id===activity.id);return index>0?index*3:0;
+    const peers=mission.activities.filter(a=>{
+      if(a.type!==activity.type)return false;
+      return a.type==='radial'
+        ? a.azimuth===activity.azimuth&&a.start===activity.start&&a.end===activity.end
+        : a.arcStart===activity.arcStart&&a.arcEnd===activity.arcEnd&&a.radius===activity.radius;
+    });
+    const index=peers.findIndex(a=>a.id===activity.id);
+    if(peers.length<2)return 0;
+    return (index-(peers.length-1)/2)*4;
   }
-  function drawActivity(activity,color,shift,opacity){
+  function drawActivity(activity,color,shift,opacity,width=5,halo=false){
     const group=$('#rose-lines');let mark;
-    if(activity.type==='arc')mark=svgEl('path',{d:arcPath(activity.arcStart,activity.arcEnd,activity.radius,shift),fill:'none',stroke:color,'stroke-width':5,'stroke-linecap':'round',opacity});
-    else{const offset=duplicateOffset(activity)+shift,start=point(activity.azimuth,activity.start,offset),end=point(activity.azimuth,activity.end,offset);mark=svgEl('line',{x1:start.x,y1:start.y,x2:end.x,y2:end.y,stroke:color,'stroke-width':5,'stroke-linecap':'round',opacity});group.append(svgEl('circle',{cx:start.x,cy:start.y,r:3,fill:color,opacity}));}
+    const common={fill:'none',stroke:color,'stroke-width':width,'stroke-linecap':'round',opacity};
+    if(halo){
+      const h=activity.type==='arc'
+        ?svgEl('path',{d:arcPath(activity.arcStart,activity.arcEnd,activity.radius,shift),fill:'none',stroke:'var(--text)','stroke-width':width+4,'stroke-linecap':'round',opacity:.22})
+        :(()=>{const off=duplicateOffset(activity)+shift,s=point(activity.azimuth,activity.start,off),e=point(activity.azimuth,activity.end,off);return svgEl('line',{x1:s.x,y1:s.y,x2:e.x,y2:e.y,stroke:'var(--text)','stroke-width':width+4,'stroke-linecap':'round',opacity:.22})})();
+      group.append(h);
+    }
+    if(activity.type==='arc')mark=svgEl('path',{d:arcPath(activity.arcStart,activity.arcEnd,activity.radius,shift),...common});
+    else{const offset=duplicateOffset(activity)+shift,start=point(activity.azimuth,activity.start,offset),end=point(activity.azimuth,activity.end,offset);mark=svgEl('line',{x1:start.x,y1:start.y,x2:end.x,y2:end.y,stroke:color,'stroke-width':width,'stroke-linecap':'round',opacity});group.append(svgEl('circle',{cx:start.x,cy:start.y,r:Math.max(2,width*.55),fill:color,opacity}));}
     group.append(mark);
   }
   function drawLabel(activity){
@@ -441,9 +605,18 @@
     const t=svgEl('text',{x:p.x,y:p.y,'text-anchor':'middle',class:'radial-label'});t.textContent=activity.type==='arc'?`${fmt(activity.arcStart)}°–${fmt(activity.arcEnd)}°`:`${fmt(activity.azimuth)}°`;group.append(t);
   }
   function renderRose(){
-    drawGrid();const lines=$('#rose-lines');lines.replaceChildren();
-    mission.activities.forEach(a=>{if(a.tx1Planned)drawActivity(a,'var(--blue)',a.tx2Planned?-2.5:0,a.tx1Done ? .18 : .95);if(a.tx2Planned)drawActivity(a,'var(--red)',a.tx1Planned?2.5:0,a.tx2Done ? .18 : .95);if(a.tx1Planned||a.tx2Planned)drawLabel(a);});
+    drawGrid();const lines=$('#rose-lines');lines.replaceChildren();ensureActive();
+    const nxt=nextStep();
+    mission.activities.forEach(a=>{
+      const color=a.tx==='TX2'?'var(--red)':'var(--blue)';
+      const active=a.id===mission.activeId, upcoming=nxt&&a.id===nxt.id;
+      const opacity=a.done?.25:(active?1:(upcoming?.88:.50));
+      const width=active?11:(upcoming?6:4);
+      drawActivity(a,color,0,opacity,width,Boolean(upcoming&&!a.done));
+      drawLabel(a);
+    });
     drawAircraft();
+    renderFlightStepPanel();
     $('#scale-info').textContent=`Escala: ${fmt(maxDistance())} NM`;
   }
   function toRad(v){return v*Math.PI/180;}
@@ -452,14 +625,26 @@
     const deg=num(degValue),min=num(minValue),limit=isLat?90:180;if(!Number.isFinite(deg)||!Number.isFinite(min)||deg<0||deg>limit||min<0||min>=60||(deg===limit&&min>0))return NaN;
     const sign=(hemi==='S'||hemi==='W')?-1:1;return sign*(deg+min/60);
   }
+
+  function decimalToFmsOrBlank(value,isLon=false){
+    if(value===''||value===null||value===undefined||!Number.isFinite(Number(value))){
+      return {deg:'',min:'',hemi:isLon?'W':'S'};
+    }
+    return decimalToFms(Number(value),isLon);
+  }
+
   function decimalToFms(value,type){
     const v=Number(value);if(!Number.isFinite(v))return{deg:'',min:'',hemi:type==='lat'?'S':'W'};const abs=Math.abs(v),deg=Math.floor(abs),min=((abs-deg)*60).toFixed(2);return{deg:String(deg).padStart(type==='lat'?2:3,'0'),min,hemi:type==='lat'?(v<0?'S':'N'):(v<0?'W':'E')};
   }
-  function stationCoords(){const lat=fmsToDecimal($('#station-lat-deg').value,$('#station-lat-min').value,$('#station-lat-hemi').value,true),lon=fmsToDecimal($('#station-lon-deg').value,$('#station-lon-min').value,$('#station-lon-hemi').value,false);return Number.isFinite(lat)&&Number.isFinite(lon)?{lat,lon}:null;}
-  function magneticVariation(){
-    const value=num($('#station-magvar').value);
-    if(!Number.isFinite(value)||value<0||value>90)return 0;
-    return $('#station-magvar-hemi').value==='W'?-value:value;
+  function stationCoords(){
+    const num=id=>{const s=String($(id).value||'').trim().replace(',','.');return s===''?NaN:Number(s);};
+    const latDeg=num('#station-lat-deg'),latMin=num('#station-lat-min');
+    const lonDeg=num('#station-lon-deg'),lonMin=num('#station-lon-min');
+    if(![latDeg,latMin,lonDeg,lonMin].every(Number.isFinite))return null;
+    let lat=latDeg+latMin/60,lon=lonDeg+lonMin/60;
+    if($('#station-lat-hemi').value==='S')lat=-lat;
+    if($('#station-lon-hemi').value==='W')lon=-lon;
+    return {lat,lon};
   }
   function trueToMagnetic(trueBearing){return (trueBearing-magneticVariation()+360)%360;}
   function bearingDistance(lat1,lon1,lat2,lon2){
@@ -483,8 +668,11 @@
   function updateGnssReadout(){
     const out=$('#gnss-readout');if(!out)return;if(!lastPosition){out.innerHTML='<strong>GNSS aguardando posição…</strong>';return;}
     const st=stationCoords();if(!st){out.innerHTML='<strong>Informe latitude e longitude do auxílio.</strong>';return;}
-    const c=lastPosition.coords,bd=bearingDistance(st.lat,st.lon,c.latitude,c.longitude),magBearing=trueToMagnetic(bd.bearing),acc=Number.isFinite(c.accuracy)?Math.round(c.accuracy):'—';
-    out.innerHTML=`<strong>RDL ${fmt(magBearing)}° · D${fmt(bd.distance)} NM</strong><br>Precisão informada pelo aparelho: ±${acc} m`;
+    const c=lastPosition.coords,bd=bearingDistance(st.lat,st.lon,c.latitude,c.longitude),rdl=trueToMagnetic(bd.bearing);
+    const acc=Number.isFinite(c.accuracy)?Math.round(c.accuracy):'—';
+    const gs=Number.isFinite(c.speed)?Math.round(c.speed*1.943844):'—';
+    const trk=Number.isFinite(c.heading)&&c.speed>0.5?Math.round(trueToMagnetic(c.heading)):'—';
+    out.innerHTML=`<strong>RDL ${fmt(rdl)}° · DST ${fmt(bd.distance)} NM · GS ${gs} kt · TRK ${trk}° · ±${acc} m</strong>`;
   }
   function stopGnss(){if(gnssWatchId!==null&&navigator.geolocation)navigator.geolocation.clearWatch(gnssWatchId);gnssWatchId=null;lastPosition=null;$('#gnss-toggle').textContent='Ativar posição GNSS';$('#gnss-readout').innerHTML='<strong>GNSS desligado</strong><br>Informe as coordenadas do auxílio na página Missão.';drawAircraft();}
   function toggleGnss(){
@@ -493,44 +681,229 @@
     $('#gnss-toggle').textContent='Desativar posição GNSS';$('#gnss-readout').innerHTML='<strong>Solicitando posição…</strong>';
     gnssWatchId=navigator.geolocation.watchPosition(pos=>{lastPosition=pos;updateGnssReadout();drawAircraft();},err=>{const msg=err.code===1?'Permissão de localização negada. Ative a Localização para este app/site nos Ajustes do iPhone.':'Não foi possível obter a posição GNSS.';$('#gnss-readout').innerHTML=`<strong>${msg}</strong>`;},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
   }
-  function segmentText(a){return a.type==='arc'?`Arco ${fmt(a.arcStart)}°→${fmt(a.arcEnd)}° / D${fmt(a.radius)}`:`RDL ${fmt(a.azimuth)}° / D${fmt(a.start)}→D${fmt(a.end)}`;}
-  function checkbox(activity,key,label){
-    const wrapper=document.createElement('label'),input=document.createElement('input');wrapper.setAttribute('aria-label',label);input.type='checkbox';input.checked=Boolean(activity[key]);
-    input.addEventListener('change',()=>{activity[key]=input.checked;if(key.endsWith('Done')&&input.checked){const planned=key.replace('Done','Planned');activity[planned]=true;}if(key.endsWith('Planned')&&!input.checked){const done=key.replace('Planned','Done');activity[done]=false;}save();renderAll();});wrapper.append(input);return wrapper;
+  function directionLabel(a){
+    if(a.type==='arc')return a.direction==='ccw'?'ANTI-HORÁRIO':'HORÁRIO';
+    return a.direction==='inbound'?'INBOUND':'OUTBOUND';
   }
-  function actionButton(text,handler,kind=''){const b=document.createElement('button');b.type='button';b.className=`small ${kind}`;b.textContent=text;b.addEventListener('click',handler);return b;}
+  function setActivityDirection(id,direction){
+    const a=mission.activities.find(x=>x.id===id);if(!a)return;
+    a.direction=direction;save();renderAll();
+  }
+  function setPlanDirection(dir){
+    planDirection=dir;
+  
+
+  document.querySelectorAll('[data-plan-dir]').forEach(b=>b.classList.toggle('selected',b.dataset.planDir===dir));
+  }
+  function syncPlanDirectionUI(){
+    const type=$('#activity-type').value||'radial';
+    const radial=type==='radial';
+    $('#plan-radial-direction').hidden=!radial;
+    $('#plan-arc-direction').hidden=radial;
+    if(radial&&!['inbound','outbound'].includes(planDirection))setPlanDirection('inbound');
+    if(!radial&&!['cw','ccw'].includes(planDirection))setPlanDirection('cw');
+  }
+  function segmentText(a){
+    if(a.type==='arc'){
+      const s=a.direction==='ccw'?a.arcEnd:a.arcStart,e=a.direction==='ccw'?a.arcStart:a.arcEnd;
+      return `Arco ${fmt(s)}°→${fmt(e)}° / D${fmt(a.radius)} · ${directionLabel(a)}`;
+    }
+    const s=a.direction==='inbound'?a.end:a.start,e=a.direction==='inbound'?a.start:a.end;
+    return `RDL ${fmt(a.azimuth)}° / D${fmt(s)}→D${fmt(e)} · ${directionLabel(a)}`;
+  }
+  function actionButton(text,handler,kind=''){const b=document.createElement('button');b.type='button';b.className=`small ${kind}`;b.textContent=text;b.addEventListener('click',e=>{e.stopPropagation();handler();});return b;}
+  function setActive(id){const a=mission.activities.find(x=>x.id===id);if(!a||a.done)return;mission.activeId=id;save();renderAll();}
+  function completeActive(){
+    ensureActive();const a=activeStep();if(!a||a.done)return;
+    completionHistory.push({id:a.id,activeId:a.id});
+    a.done=true;const n=nextStep();mission.activeId=n?n.id:null;save();renderAll();
+  }
+  function undoComplete(){
+    let rec=completionHistory.pop();
+    let a=rec&&mission.activities.find(x=>x.id===rec.id);
+    if(!a){
+      for(let i=mission.activities.length-1;i>=0;i--){
+        if(mission.activities[i].done){a=mission.activities[i];break;}
+      }
+    }
+    if(!a)return;
+    a.done=false;mission.activeId=a.id;save();renderAll();
+  }
+  function moveActive(direction){
+    if(!mission.activities.length)return;
+    let i=activeIndex();
+    if(i<0)i=0;
+    const ni=i+direction;
+    if(ni<0||ni>=mission.activities.length)return;
+    mission.activeId=mission.activities[ni].id;
+    save();renderAll();
+  }
+  function renderFlightStepPanel(){
+    const a=activeStep(),n=nextStep(),now=$('#active-step-text'),next=$('#next-step-text'),wrap=$('.step-now');
+    if(!now||!next)return;
+    wrap.classList.remove('active-tx1','active-tx2');
+    if(a){now.textContent=`${String(activeIndex()+1).padStart(2,'0')} · ${segmentText(a)} · ${a.tx}`;wrap.classList.add(a.tx==='TX2'?'active-tx2':'active-tx1');}
+    else now.textContent='Missão concluída / nenhuma etapa ativa';
+    next.textContent=n?`${String(mission.activities.indexOf(n)+1).padStart(2,'0')} · ${segmentText(n)} · ${n.tx}`:'—';
+    const i=activeIndex();
+    $('#step-complete').disabled=!a||Boolean(a&&a.done);
+    $('#step-prev').disabled=i<=0;
+    $('#step-next').disabled=i<0||i>=mission.activities.length-1;
+    $('#step-undo').disabled=!mission.activities.some(x=>x.done);
+  }
   function renderTable(){
-    const body=$('#activity-rows');body.replaceChildren();
-    if(!mission.activities.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=7;cell.className='empty';cell.textContent='Nenhuma atividade cadastrada.';row.append(cell);body.append(row);}
-    mission.activities.forEach(a=>{
-      const row=document.createElement('tr');row.dataset.id=a.id;if(a.id===selectedId)row.classList.add('selected');
-      const planned=[a.tx1Planned,a.tx2Planned].filter(Boolean).length,done=[a.tx1Planned&&a.tx1Done,a.tx2Planned&&a.tx2Done].filter(Boolean).length;if(planned&&planned===done)row.classList.add('done');
-      const title=document.createElement('td');title.className='activity-title';title.textContent=a.description;
-      const detail=document.createElement('td');detail.className='activity-detail';detail.textContent=segmentText(a)+(a.notes?` · ${a.notes}`:'');row.append(title,detail);
-      [['tx1Planned','TX1 planejado'],['tx1Done','TX1 feito'],['tx2Planned','TX2 planejado'],['tx2Done','TX2 feito']].forEach(([key,label])=>{const cell=document.createElement('td');cell.className='check center';cell.append(checkbox(a,key,`${label}: ${a.description}`));row.append(cell);});
-      const actions=document.createElement('td'),wrap=document.createElement('div');wrap.className='row-actions';wrap.append(actionButton('Editar',()=>editActivity(a.id)),actionButton('Excluir',()=>deleteActivity(a.id),'danger'));actions.append(wrap);row.append(actions);
-      row.addEventListener('click',event=>{if(event.target.closest('input,button'))return;focusActivity(a.id);});body.append(row);
+    ensureActive();
+    const list=$('#execution-list');if(!list)return;list.replaceChildren();
+    if(!mission.activities.length){const e=document.createElement('div');e.className='empty';e.textContent='Nenhuma atividade cadastrada.';list.append(e);}
+    const nxt=nextStep();
+    mission.activities.forEach((a,index)=>{
+      const card=document.createElement('div');card.className='exec-card';card.dataset.id=a.id;
+      if(a.done)card.classList.add('is-done');
+      if(a.id===mission.activeId)card.classList.add('is-active');
+      if(nxt&&a.id===nxt.id)card.classList.add('is-next');
+
+      const main=document.createElement('div');main.className='exec-main';
+      const head=document.createElement('div');head.className='exec-head';
+      const numEl=document.createElement('span');numEl.className='exec-number';numEl.textContent=String(index+1).padStart(2,'0');
+      const tx=document.createElement('span');tx.className=`tx-badge ${a.tx==='TX2'?'tx2':'tx1'}`;tx.textContent=a.tx;
+      head.append(numEl,tx);
+      if(a.id===mission.activeId){const s=document.createElement('span');s.className='state-badge';s.textContent='ATIVA';head.append(s);}
+      else if(nxt&&a.id===nxt.id){const s=document.createElement('span');s.className='state-badge';s.textContent='PRÓXIMA';head.append(s);}
+      else if(a.done){const s=document.createElement('span');s.className='state-badge';s.textContent='✓ CONCLUÍDA';head.append(s);}
+      const title=document.createElement('div');title.className='exec-title';title.textContent=a.description;
+      const detail=document.createElement('div');detail.className='exec-detail';detail.textContent=segmentText(a)+(a.notes?` · ${a.notes}`:'');
+      main.append(head,title,detail);
+
+      const actions=document.createElement('div');actions.className='exec-actions';
+      if(!a.done) actions.append(actionButton(a.id===mission.activeId?'Ativa':'Tornar ativa',()=>setActive(a.id)));
+      if(a.id===mission.activeId) actions.append(actionButton('Concluir',completeActive,'primary'));
+      const dirs=document.createElement('div');dirs.className='direction-choice';
+      const choices=a.type==='arc'?[['cw','↻','Horário'],['ccw','↺','Anti-horário']]:[['inbound','IN','Inbound'],['outbound','OUT','Outbound']];
+      choices.forEach(([value,label,title])=>{
+        const b=actionButton(label,()=>setActivityDirection(a.id,value));b.title=title;
+        if(a.type==='arc')b.classList.add('curve');
+        if((a.direction||(a.type==='arc'?'cw':'inbound'))===value)b.classList.add('selected');
+        dirs.append(b);
+      });
+      actions.append(dirs);
+      actions.append(actionButton('Editar',()=>editActivity(a.id)),actionButton('Excluir',()=>deleteActivity(a.id),'danger'));
+
+      card.append(main,actions);
+      installLongPressDrag(card);
+      card.addEventListener('click',e=>{if(e.target.closest('button'))return;setActive(a.id);});
+      list.append(card);
     });
-    const total=mission.activities.reduce((n,a)=>n+Number(a.tx1Planned)+Number(a.tx2Planned),0),completed=mission.activities.reduce((n,a)=>n+Number(a.tx1Planned&&a.tx1Done)+Number(a.tx2Planned&&a.tx2Done),0);$('#progress').textContent=`${completed}/${total} TX feitos`;const roseProgress=$('#progress-rose');if(roseProgress)roseProgress.textContent=`${completed}/${total} TX feitos`;
+    const total=mission.activities.length,completed=mission.activities.filter(a=>a.done).length;
+    $('#progress').textContent=`${completed}/${total} etapas feitas`;const rp=$('#progress-rose');if(rp)rp.textContent=`${completed}/${total} etapas feitas`;
+    renderFlightStepPanel();
+  }
+  function persistVisualOrder(){
+    const ids=[...$('#execution-list').querySelectorAll('.exec-card')].map(x=>x.dataset.id);
+    mission.activities.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));save();
+  }
+  function moveDraggedCard(card,x,y){
+    card.style.pointerEvents='none';
+    const target=document.elementFromPoint(x,y)?.closest('.exec-card');
+    card.style.pointerEvents='';
+    if(!target||target===card)return;
+    const list=$('#execution-list'),rect=target.getBoundingClientRect();
+    list.insertBefore(card,y<rect.top+rect.height/2?target:target.nextSibling);
+  }
+  function neutralPoint(target){
+    return !target.closest('button,input,select,textarea,a,label');
+  }
+  function installLongPressDrag(card){
+    let timer=null,armed=false,startX=0,startY=0,lastX=0,lastY=0;
+    let suppressClick=false;
+
+    const clearArm=()=>{if(timer){clearTimeout(timer);timer=null;}};
+
+    const arm=(x,y)=>{
+      armed=true;suppressClick=true;lastX=x;lastY=y;
+      dragState={card};
+      $('#execution-list').classList.add('reordering');
+      card.classList.add('dragging','longpress-ready');
+      if(navigator.vibrate)navigator.vibrate(25);
+    };
+
+    const finish=()=>{
+      clearArm();
+      if(armed){
+        armed=false;
+        card.classList.remove('dragging','longpress-ready');
+        $('#execution-list').classList.remove('reordering');
+        dragState=null;
+        persistVisualOrder();
+        renderAll();
+      }
+      setTimeout(()=>{suppressClick=false;},250);
+    };
+
+    card.addEventListener('touchstart',e=>{
+      if(e.touches.length!==1||!neutralPoint(e.target))return;
+      const t=e.touches[0];
+      startX=lastX=t.clientX;startY=lastY=t.clientY;
+      clearArm();
+      timer=setTimeout(()=>arm(lastX,lastY),1000);
+    },{passive:true});
+
+    card.addEventListener('touchmove',e=>{
+      if(e.touches.length!==1)return;
+      const t=e.touches[0];lastX=t.clientX;lastY=t.clientY;
+      if(!armed){
+        if(Math.hypot(lastX-startX,lastY-startY)>12)clearArm();
+        return;
+      }
+      e.preventDefault();
+      moveDraggedCard(card,lastX,lastY);
+    },{passive:false});
+
+    card.addEventListener('touchend',finish,{passive:true});
+    card.addEventListener('touchcancel',finish,{passive:true});
+
+    // Desktop: same idea with mouse — hold for 1 s on a neutral area, then drag.
+    card.addEventListener('pointerdown',e=>{
+      if(e.pointerType!=='mouse'||e.button!==0||!neutralPoint(e.target))return;
+      startX=lastX=e.clientX;startY=lastY=e.clientY;
+      clearArm();timer=setTimeout(()=>arm(lastX,lastY),1000);
+    });
+    card.addEventListener('pointermove',e=>{
+      if(e.pointerType!=='mouse')return;
+      lastX=e.clientX;lastY=e.clientY;
+      if(!armed){
+        if(timer&&Math.hypot(lastX-startX,lastY-startY)>8)clearArm();
+        return;
+      }
+      e.preventDefault();moveDraggedCard(card,lastX,lastY);
+    });
+    card.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')finish();});
+    card.addEventListener('pointercancel',e=>{if(e.pointerType==='mouse')finish();});
+
+    card.addEventListener('click',e=>{
+      if(suppressClick){e.preventDefault();e.stopImmediatePropagation();}
+    },true);
+    card.addEventListener('contextmenu',e=>{if(armed||timer)e.preventDefault();});
   }
   function renderAll(){renderRose();renderTable();applyView();}
   function setType(type=$('#activity-type').value){
     const arc=type==='arc';$('#activity-type').value=arc?'arc':'radial';
+    planDirection=arc?'cw':'inbound';
     $('#radial-fields').hidden=arc;$('#arc-fields').hidden=!arc;
     $('#choose-radial').classList.toggle('active',!arc);$('#choose-arc').classList.toggle('active',arc);
     $('#choose-radial').setAttribute('aria-pressed',String(!arc));$('#choose-arc').setAttribute('aria-pressed',String(arc));
+    syncPlanDirectionUI();
   }
-  function resetForm(){editingId=null;$('#activity-form').reset();$('#plan-tx1').checked=true;$('#plan-tx2').checked=true;$('#activity-type').value='radial';setType();$('#form-title').textContent='Adicionar atividade';$('#save-activity').textContent='Adicionar atividade';$('#cancel-edit').hidden=true;$('#form-error').textContent='';}
+  function resetForm(){planDirection='inbound';editingId=null;$('#activity-form').reset();$('#plan-tx1').checked=true;$('#plan-tx2').checked=true;$('#activity-type').value='radial';setType();$('#form-title').textContent='Adicionar atividade';$('#save-activity').textContent='Adicionar atividade';$('#cancel-edit').hidden=true;$('#form-error').textContent='';}
   function validateActivity(){
     const type=$('#activity-type').value,description=$('#activity-description').value.trim(),notes=$('#activity-notes').value.trim();if(!description)return{error:'Informe uma descrição para a atividade.'};
-    const base={id:editingId||`a-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,description,notes,tx1Planned:$('#plan-tx1').checked,tx1Done:false,tx2Planned:$('#plan-tx2').checked,tx2Done:false};
+    const base={id:editingId||`a-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,description,notes,direction:planDirection,tx1Planned:$('#plan-tx1').checked,tx2Planned:$('#plan-tx2').checked};
     if(!base.tx1Planned&&!base.tx2Planned)return{error:'Planeje a atividade em pelo menos um transmissor.'};
     if(type==='radial'){const azimuth=num($('#radial-az').value),start=num($('#radial-start').value),end=num($('#radial-end').value);if(!Number.isFinite(azimuth)||azimuth<0||azimuth>=360)return{error:'O azimute deve estar entre 0° e 359,9°.'};if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<0||start>500||end>500||start===end)return{error:'Informe distâncias inicial e final diferentes, entre 0 e 500 NM.'};return{activity:{...base,azimuth,start,end}};}
     const arcStart=num($('#arc-start').value),arcEnd=num($('#arc-end').value),radiusNm=num($('#arc-radius').value);if(!Number.isFinite(arcStart)||!Number.isFinite(arcEnd)||arcStart<0||arcStart>=360||arcEnd<0||arcEnd>=360||arcStart===arcEnd)return{error:'Informe azimutes inicial e final válidos e diferentes.'};if(!Number.isFinite(radiusNm)||radiusNm<=0||radiusNm>500)return{error:'O raio do arco deve estar entre 0,1 e 500 NM.'};return{activity:{...base,arcStart,arcEnd,radius:radiusNm}};
   }
   function editActivity(id){
     showPage('plan');
-    const a=mission.activities.find(item=>item.id===id);if(!a)return;editingId=id;$('#activity-type').value=a.type;setType();$('#activity-description').value=a.description;$('#activity-notes').value=a.notes||'';$('#plan-tx1').checked=a.tx1Planned;$('#plan-tx2').checked=a.tx2Planned;
+    const a=mission.activities.find(item=>item.id===id);if(!a)return;editingId=id;$('#activity-type').value=a.type;setType();$('#activity-description').value=a.description;$('#activity-notes').value=a.notes||'';$('#plan-tx1').checked=a.tx==='TX1';$('#plan-tx2').checked=a.tx==='TX2';setPlanDirection(a.direction||(a.type==='arc'?'cw':'inbound'));syncPlanDirectionUI();
     if(a.type==='radial'){$('#radial-az').value=a.azimuth;$('#radial-start').value=a.start;$('#radial-end').value=a.end;}else{$('#arc-start').value=a.arcStart;$('#arc-end').value=a.arcEnd;$('#arc-radius').value=a.radius;}
     $('#form-title').textContent='Editar atividade';$('#save-activity').textContent='Salvar alterações';$('#cancel-edit').hidden=false;$('#activity-form').scrollIntoView({behavior:'smooth',block:'start'});
   }
@@ -540,25 +913,107 @@
   function setZoom(value){viewZoom=Math.max(1,Math.min(6,value));if(viewZoom===1){viewX=center;viewY=center;}applyView();}
   function fitMission(){viewX=center;viewY=center;selectedId=null;setZoom(1);renderTable();}
   function focusActivity(id){const a=mission.activities.find(item=>item.id===id);if(!a)return;selectedId=id;const distance=a.type==='arc'?a.radius:Math.max(a.start,a.end),target=Math.min(5,Math.max(1,maxDistance()/(distance*1.15)));if(target===1||a.type==='arc'){viewX=center;viewY=center;}else{const p=point(a.azimuth,distance,duplicateOffset(a));viewX=(center+p.x)/2;viewY=(center+p.y)/2;}setZoom(target);renderTable();}
+  function centerAid(){viewX=center;viewY=center;applyView();}
+  function centerAircraft(){
+    if(!lastPosition){alert('Ative a posição GNSS para centralizar na aeronave.');return;}
+    const st=stationCoords();if(!st)return;const c=lastPosition.coords,bd=bearingDistance(st.lat,st.lon,c.latitude,c.longitude),p=point(trueToMagnetic(bd.bearing),Math.min(bd.distance,maxDistance()));
+    if(viewZoom<2)viewZoom=2;viewX=p.x;viewY=p.y;applyView();
+  }
+  function getMissionLibrary(){
+    try{const x=JSON.parse(localStorage.getItem(MISSIONS_LIBRARY_KEY)||'[]');return Array.isArray(x)?x:[];}catch(_){return[];}
+  }
+  function setMissionLibrary(items){
+    try{localStorage.setItem(MISSIONS_LIBRARY_KEY,JSON.stringify(items));}catch(_){}
+  }
+  function missionDisplayName(m){
+    const name=(m.metadata?.name||'Missão sem nome').trim()||'Missão sem nome';
+    const number=(m.metadata?.number||'').trim();
+    return number?`${name} · Plan. ${number}`:name;
+  }
+  function saveMissionToLibrary(){
+    // Sincroniza os campos antes de guardar.
+    const st=stationCoords();
+    mission.metadata={...mission.metadata,name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value,
+      stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};
+    if(!mission.savedMissionId)mission.savedMissionId=`m-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+    const library=getMissionLibrary(),copy=JSON.parse(JSON.stringify(mission)),i=library.findIndex(x=>x.savedMissionId===mission.savedMissionId);
+    copy.savedAt=new Date().toISOString();
+    if(i>=0)library[i]=copy;else library.unshift(copy);
+    setMissionLibrary(library);save();renderSavedMissions();
+  }
+  function openSavedMission(id){
+    const found=getMissionLibrary().find(x=>x.savedMissionId===id);if(!found)return;
+    mission=JSON.parse(JSON.stringify(found));migrateActivities();save();load();resetForm();fitMission();renderAll();showPage('mission');
+  }
+  function deleteSavedMission(id){
+    if(!confirm('Excluir esta missão da lista de missões salvas?'))return;
+    setMissionLibrary(getMissionLibrary().filter(x=>x.savedMissionId!==id));
+    if(mission.savedMissionId===id)mission.savedMissionId=null;
+    save();renderSavedMissions();
+  }
+  function renderSavedMissions(){
+    const list=$('#saved-missions-list');if(!list)return;list.replaceChildren();
+    const library=getMissionLibrary();
+    if(!library.length){const e=document.createElement('div');e.className='muted';e.style.fontSize='10px';e.textContent='Nenhuma missão salva.';list.append(e);return;}
+    library.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||'')).forEach(m=>{
+      const row=document.createElement('div');row.className='saved-mission-item'+(m.savedMissionId===mission.savedMissionId?' current':'');
+      const open=document.createElement('button');open.type='button';open.className='saved-mission-open';
+      const title=document.createElement('strong');title.textContent=missionDisplayName(m);
+      const info=document.createElement('span');info.textContent=[m.metadata?.date||'',`${m.activities?.length||0} etapas`].filter(Boolean).join(' · ');
+      open.append(title,info);open.addEventListener('click',()=>openSavedMission(m.savedMissionId));
+      const del=document.createElement('button');del.type='button';del.className='saved-mission-delete';del.textContent='×';del.title='Excluir missão salva';del.addEventListener('click',()=>deleteSavedMission(m.savedMissionId));
+      row.append(open,del);list.append(row);
+    });
+  }
   function exportMission(){const blob=new Blob([JSON.stringify({...mission,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a'),name=(mission.metadata.name||'missao-dvor').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();link.href=url;link.download=`${name||'missao-dvor'}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-  function importMission(file){const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!data.metadata||!Array.isArray(data.activities))throw new Error();mission={metadata:data.metadata,activities:data.activities};save();load();resetForm();fitMission();renderAll();}catch(_){alert('Arquivo de missão inválido.');}};reader.readAsText(file);}
+  function importMission(file){const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!data.metadata||!Array.isArray(data.activities))throw new Error();mission={metadata:data.metadata,activities:data.activities,activeId:data.activeId||null};migrateActivities();save();load();resetForm();fitMission();renderAll();}catch(_){alert('Arquivo de missão inválido.');}};reader.readAsText(file);}
 
   document.querySelectorAll('.page-nav button').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.page)));
   $('#choose-radial').addEventListener('click',()=>setType('radial'));
   $('#choose-arc').addEventListener('click',()=>setType('arc'));
-  $('#activity-form').addEventListener('submit',event=>{event.preventDefault();const result=validateActivity();if(result.error){$('#form-error').textContent=result.error;return;}const existing=mission.activities.find(a=>a.id===editingId);if(existing){result.activity.tx1Done=existing.tx1Done&&result.activity.tx1Planned;result.activity.tx2Done=existing.tx2Done&&result.activity.tx2Planned;mission.activities=mission.activities.map(a=>a.id===editingId?result.activity:a);}else mission.activities.push(result.activity);save();resetForm();fitMission();renderAll();});
+  $('#activity-form').addEventListener('submit',event=>{
+    event.preventDefault();const result=validateActivity();if(result.error){$('#form-error').textContent=result.error;return;}
+    const base=result.activity,existing=mission.activities.find(a=>a.id===editingId);if(existing)base.direction=existing.direction||(base.type==='arc'?'cw':'outbound');
+    if(existing){
+      const txs=[];if(base.tx1Planned)txs.push('TX1');if(base.tx2Planned)txs.push('TX2');
+      const first={...base,id:existing.id,tx:txs[0],done:existing.done};delete first.tx1Planned;delete first.tx2Planned;
+      const idx=mission.activities.findIndex(a=>a.id===editingId);mission.activities[idx]=first;
+      if(txs[1]){const second={...first,id:`${base.id}-tx2-${Date.now()}`,tx:txs[1],done:false};mission.activities.splice(idx+1,0,second);}
+      if(mission.activeId===editingId&&first.done)mission.activeId=null;
+    }else{
+      const txs=[];if(base.tx1Planned)txs.push('TX1');if(base.tx2Planned)txs.push('TX2');
+      txs.forEach((tx,i)=>{const a={...base,id:i?`${base.id}-tx2`:base.id,tx,done:false};delete a.tx1Planned;delete a.tx2Planned;mission.activities.push(a);});
+      if(!mission.activeId)mission.activeId=(mission.activities.find(a=>!a.done)||{}).id||null;
+    }
+    save();resetForm();fitMission();renderAll();
+  });
   $('#cancel-edit').addEventListener('click',resetForm);
   ['#mission-name','#mission-number','#mission-date','#station-lat-deg','#station-lat-min','#station-lat-hemi','#station-lon-deg','#station-lon-min','#station-lon-hemi','#station-magvar','#station-magvar-hemi'].forEach(selector=>$(selector).addEventListener('input',()=>{const st=stationCoords();mission.metadata={name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value,stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};save();if(lastPosition){updateGnssReadout();drawAircraft();}}));
-  $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão e apagar os dados atuais deste aparelho? Exporte a missão antes se desejar conservá-la.'))return;mission={metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[]};save();load();resetForm();fitMission();renderAll();});
-  $('#export-btn').addEventListener('click',exportMission);$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
+  $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão? A missão atual continuará na lista somente se tiver sido salva.'))return;mission={savedMissionId:null,metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};save();load();resetForm();fitMission();renderAll();renderSavedMissions();});
+  $('#save-mission').addEventListener('click',saveMissionToLibrary);$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
+  document.querySelectorAll('[data-plan-dir]').forEach(b=>b.addEventListener('click',()=>setPlanDirection(b.dataset.planDir)));
+  syncPlanDirectionUI();
   $('#gnss-toggle').addEventListener('click',toggleGnss);
+  $('#step-complete').addEventListener('click',completeActive);
+  $('#step-prev').addEventListener('click',()=>moveActive(-1));
+  $('#step-next').addEventListener('click',()=>moveActive(1));
+  $('#step-undo').addEventListener('click',undoComplete);
+  $('#center-aircraft').addEventListener('click',centerAircraft);
+  $('#center-aid').addEventListener('click',centerAid);
   $('#zoom-in').addEventListener('click',()=>setZoom(viewZoom*1.35));$('#zoom-out').addEventListener('click',()=>setZoom(viewZoom/1.35));$('#zoom-fit').addEventListener('click',fitMission);$('#zoom-fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('#rose-panel').requestFullscreen();}catch(_){}});document.addEventListener('fullscreenchange',()=>{$('#zoom-fullscreen').textContent=document.fullscreenElement?'Sair da tela cheia':'Tela cheia';});
   $('#rose').addEventListener('wheel',event=>{event.preventDefault();setZoom(viewZoom*(event.deltaY<0?1.18:1/1.18));},{passive:false});$('#rose').addEventListener('dblclick',fitMission);
   $('#rose').addEventListener('pointerdown',event=>{$('#rose').setPointerCapture(event.pointerId);pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});$('#rose').classList.add('dragging');if(pointers.size===2){const p=[...pointers.values()];lastPinch=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);}});
   $('#rose').addEventListener('pointermove',event=>{const previous=pointers.get(event.pointerId);if(!previous)return;pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});if(pointers.size===1&&viewZoom>1){const rect=$('#rose').getBoundingClientRect(),scale=500/(viewZoom*rect.width);viewX-=(event.clientX-previous.x)*scale;viewY-=(event.clientY-previous.y)*scale;applyView();}else if(pointers.size===2){const p=[...pointers.values()],distance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(lastPinch)setZoom(viewZoom*distance/lastPinch);lastPinch=distance;}});
   function release(event){pointers.delete(event.pointerId);lastPinch=null;if(!pointers.size)$('#rose').classList.remove('dragging');}$('#rose').addEventListener('pointerup',release);$('#rose').addEventListener('pointercancel',release);
 
-  load();setType();renderAll();showPage('mission');
+  // Impede zoom gestual da interface no iOS; mantém os gestos próprios do mapa.
+  ['gesturestart','gesturechange','gestureend'].forEach(type=>{
+    document.addEventListener(type,event=>{
+      if(!event.target.closest || !event.target.closest('#rose')) event.preventDefault();
+    },{passive:false});
+  });
+
+  load();renderSavedMissions();setType();renderAll();showPage('mission');
 })();
 </script>
 <script>
