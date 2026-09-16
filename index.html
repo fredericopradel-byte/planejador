@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>IV-PLANNER</title>
-<meta name="iv-planner-build" content="2.6">
+<meta name="iv-planner-build" content="2.7">
 <style>
   :root{color-scheme:light dark;--bg:#eeeeef;--panel:#fafafa;--text:#252629;--muted:#696b70;--border:#b8b9bd;--accent:#b3262d;--blue:#1473e6;--red:#c62830;--danger:#9f1f25;--soft:#e2e2e4}
   *{box-sizing:border-box}
@@ -280,6 +280,18 @@
 
   #export-mission{background:var(--panel)!important;color:var(--text)!important;border:1px solid var(--border)!important}
 
+
+  .saved-missions{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+  .saved-missions-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-bottom:7px}
+  .saved-missions-head strong{font-size:13px}.saved-missions-head .muted{font-size:9px}
+  .saved-missions-list{display:flex;flex-direction:column;gap:5px}
+  .saved-mission-item{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;border:1px solid var(--border);
+    border-radius:8px;padding:6px 7px;background:var(--bg)}
+  .saved-mission-open{border:0;background:transparent;color:var(--text);padding:2px;text-align:left;min-height:34px}
+  .saved-mission-open strong{display:block;font-size:12px}.saved-mission-open span{display:block;font-size:9px;color:var(--muted);margin-top:2px}
+  .saved-mission-delete{min-width:32px;min-height:32px;padding:2px 7px;font-size:12px}
+  .saved-mission-item.current{border-color:var(--accent)}
+
 </style>
 </head>
 <body>
@@ -331,10 +343,17 @@
           </div>
         </div>
       </div>
+      <div class="saved-missions">
+        <div class="saved-missions-head">
+          <strong>Missões salvas</strong>
+          <span class="muted">Acesso rápido neste aparelho</span>
+        </div>
+        <div id="saved-missions-list" class="saved-missions-list"></div>
+      </div>
       <div class="mission-actions">
         <button id="new-mission" type="button">Nova missão</button>
         <button id="import-btn" type="button">Importar missão</button>
-        <button class="primary" id="export-btn" type="button">Exportar missão</button>
+        <button class="primary" id="save-mission" type="button">Salvar missão</button>
         <input id="import-file" type="file" accept="application/json,.json" hidden>
       </div>
     </section>
@@ -452,11 +471,12 @@
 <script>
 (() => {
   const STORAGE_KEY='geiv-dvor-manual-offline-v1';
+  const MISSIONS_LIBRARY_KEY='iv-planner-saved-missions-v1';
   const $=selector=>document.querySelector(selector);
   const svgNS='http://www.w3.org/2000/svg';
   const center=250, radius=190;
   let editingId=null, selectedId=null;
-  let mission={metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};
+  let mission={savedMissionId:null,metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};
   let viewZoom=1, viewX=center, viewY=center, lastPinch=null;
   const pointers=new Map();
   let currentPage='mission';
@@ -879,6 +899,52 @@
     const st=stationCoords();if(!st)return;const c=lastPosition.coords,bd=bearingDistance(st.lat,st.lon,c.latitude,c.longitude),p=point(trueToMagnetic(bd.bearing),Math.min(bd.distance,maxDistance()));
     if(viewZoom<2)viewZoom=2;viewX=p.x;viewY=p.y;applyView();
   }
+  function getMissionLibrary(){
+    try{const x=JSON.parse(localStorage.getItem(MISSIONS_LIBRARY_KEY)||'[]');return Array.isArray(x)?x:[];}catch(_){return[];}
+  }
+  function setMissionLibrary(items){
+    try{localStorage.setItem(MISSIONS_LIBRARY_KEY,JSON.stringify(items));}catch(_){}
+  }
+  function missionDisplayName(m){
+    const name=(m.metadata?.name||'Missão sem nome').trim()||'Missão sem nome';
+    const number=(m.metadata?.number||'').trim();
+    return number?`${name} · Plan. ${number}`:name;
+  }
+  function saveMissionToLibrary(){
+    // Sincroniza os campos antes de guardar.
+    const st=stationCoords();
+    mission.metadata={...mission.metadata,name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value,
+      stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};
+    if(!mission.savedMissionId)mission.savedMissionId=`m-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+    const library=getMissionLibrary(),copy=JSON.parse(JSON.stringify(mission)),i=library.findIndex(x=>x.savedMissionId===mission.savedMissionId);
+    copy.savedAt=new Date().toISOString();
+    if(i>=0)library[i]=copy;else library.unshift(copy);
+    setMissionLibrary(library);save();renderSavedMissions();
+  }
+  function openSavedMission(id){
+    const found=getMissionLibrary().find(x=>x.savedMissionId===id);if(!found)return;
+    mission=JSON.parse(JSON.stringify(found));migrateActivities();save();load();resetForm();fitMission();renderAll();showPage('mission');
+  }
+  function deleteSavedMission(id){
+    if(!confirm('Excluir esta missão da lista de missões salvas?'))return;
+    setMissionLibrary(getMissionLibrary().filter(x=>x.savedMissionId!==id));
+    if(mission.savedMissionId===id)mission.savedMissionId=null;
+    save();renderSavedMissions();
+  }
+  function renderSavedMissions(){
+    const list=$('#saved-missions-list');if(!list)return;list.replaceChildren();
+    const library=getMissionLibrary();
+    if(!library.length){const e=document.createElement('div');e.className='muted';e.style.fontSize='10px';e.textContent='Nenhuma missão salva.';list.append(e);return;}
+    library.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||'')).forEach(m=>{
+      const row=document.createElement('div');row.className='saved-mission-item'+(m.savedMissionId===mission.savedMissionId?' current':'');
+      const open=document.createElement('button');open.type='button';open.className='saved-mission-open';
+      const title=document.createElement('strong');title.textContent=missionDisplayName(m);
+      const info=document.createElement('span');info.textContent=[m.metadata?.date||'',`${m.activities?.length||0} etapas`].filter(Boolean).join(' · ');
+      open.append(title,info);open.addEventListener('click',()=>openSavedMission(m.savedMissionId));
+      const del=document.createElement('button');del.type='button';del.className='saved-mission-delete';del.textContent='×';del.title='Excluir missão salva';del.addEventListener('click',()=>deleteSavedMission(m.savedMissionId));
+      row.append(open,del);list.append(row);
+    });
+  }
   function exportMission(){const blob=new Blob([JSON.stringify({...mission,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a'),name=(mission.metadata.name||'missao-dvor').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();link.href=url;link.download=`${name||'missao-dvor'}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function importMission(file){const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!data.metadata||!Array.isArray(data.activities))throw new Error();mission={metadata:data.metadata,activities:data.activities,activeId:data.activeId||null};migrateActivities();save();load();resetForm();fitMission();renderAll();}catch(_){alert('Arquivo de missão inválido.');}};reader.readAsText(file);}
 
@@ -903,8 +969,8 @@
   });
   $('#cancel-edit').addEventListener('click',resetForm);
   ['#mission-name','#mission-number','#mission-date','#station-lat-deg','#station-lat-min','#station-lat-hemi','#station-lon-deg','#station-lon-min','#station-lon-hemi','#station-magvar','#station-magvar-hemi'].forEach(selector=>$(selector).addEventListener('input',()=>{const st=stationCoords();mission.metadata={name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value,stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};save();if(lastPosition){updateGnssReadout();drawAircraft();}}));
-  $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão e apagar os dados atuais deste aparelho? Exporte a missão antes se desejar conservá-la.'))return;mission={metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[]};save();load();resetForm();fitMission();renderAll();});
-  $('#export-btn').addEventListener('click',exportMission);$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
+  $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão? A missão atual continuará na lista somente se tiver sido salva.'))return;mission={savedMissionId:null,metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};save();load();resetForm();fitMission();renderAll();renderSavedMissions();});
+  $('#save-mission').addEventListener('click',saveMissionToLibrary);$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
   document.querySelectorAll('[data-plan-dir]').forEach(b=>b.addEventListener('click',()=>setPlanDirection(b.dataset.planDir)));
   syncPlanDirectionUI();
   $('#gnss-toggle').addEventListener('click',toggleGnss);
@@ -927,7 +993,7 @@
     },{passive:false});
   });
 
-  load();setType();renderAll();showPage('mission');
+  load();renderSavedMissions();setType();renderAll();showPage('mission');
 })();
 </script>
 <script>
