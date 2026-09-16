@@ -1,7 +1,7 @@
 {
-  "name": "GEIV - Planejador DVOR",
-  "short_name": "GEIV DVOR",
-  "description": "Planejador DVOR offline para cadastro manual de radiais e arcos DME.",
+  "name": "IV-PLANNER",
+  "short_name": "IV-PLANNER",
+  "description": "Planejador offline para cadastro manual de passagens de IV.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
