@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#b3262d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -115,9 +115,11 @@
     label>input,label>select,label>textarea{margin-top:2px}
 
     /* MISSÃO: usa largura horizontal sem empilhar tudo */
-    #page-mission .metadata{display:grid;grid-template-columns:1.35fr .65fr;gap:6px}
+    #page-mission .metadata{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+    #page-mission .metadata label{min-width:0}
     #page-mission .metadata label:first-child{grid-column:1/-1}
     #page-mission .metadata label:last-child{grid-column:auto}
+    #mission-date{width:100%;min-width:0;max-width:100%;font-size:14px;padding-left:7px;padding-right:5px}
     .gnss-grid{display:grid;grid-template-columns:1fr;gap:6px;margin-top:7px}
     .coord-box{padding:7px;border-radius:8px}
     .coord-title{font-size:11px;margin-bottom:4px;line-height:1.15}
@@ -550,6 +552,13 @@
   $('#rose').addEventListener('pointerdown',event=>{$('#rose').setPointerCapture(event.pointerId);pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});$('#rose').classList.add('dragging');if(pointers.size===2){const p=[...pointers.values()];lastPinch=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);}});
   $('#rose').addEventListener('pointermove',event=>{const previous=pointers.get(event.pointerId);if(!previous)return;pointers.set(event.pointerId,{x:event.clientX,y:event.clientY});if(pointers.size===1&&viewZoom>1){const rect=$('#rose').getBoundingClientRect(),scale=500/(viewZoom*rect.width);viewX-=(event.clientX-previous.x)*scale;viewY-=(event.clientY-previous.y)*scale;applyView();}else if(pointers.size===2){const p=[...pointers.values()],distance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(lastPinch)setZoom(viewZoom*distance/lastPinch);lastPinch=distance;}});
   function release(event){pointers.delete(event.pointerId);lastPinch=null;if(!pointers.size)$('#rose').classList.remove('dragging');}$('#rose').addEventListener('pointerup',release);$('#rose').addEventListener('pointercancel',release);
+
+  // Impede zoom gestual da interface no iOS; mantém os gestos próprios do mapa.
+  ['gesturestart','gesturechange','gestureend'].forEach(type=>{
+    document.addEventListener(type,event=>{
+      if(!event.target.closest || !event.target.closest('#rose')) event.preventDefault();
+    },{passive:false});
+  });
 
   load();setType();renderAll();showPage('mission');
 })();
