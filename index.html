@@ -323,7 +323,7 @@
       <div class="metadata">
         <label>Localidade / auxílio<input id="mission-name" placeholder="Ex.: Porto Velho - PVH"></label>
         <label>Número do planejamento<input id="mission-number" placeholder="Ex.: 16"></label>
-        <label>Data<input id="mission-date" type="date"></label>
+        <label>Data<input id="mission-date" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" autocomplete="off"></label>
       </div>
       <div class="gnss-grid">
         <div class="coord-box">
@@ -360,7 +360,8 @@
       <div class="mission-actions">
         <button id="new-mission" type="button">Nova missão</button>
         <button id="import-btn" type="button">Importar missão</button>
-        <button class="primary" id="save-mission" type="button">Salvar missão</button>
+        <button id="save-mission" type="button">Salvar missão</button>
+        <button class="primary" id="mission-ok" type="button">OK</button>
         <input id="import-file" type="file" accept="application/json,.json" hidden>
       </div>
     </section>
@@ -528,6 +529,18 @@
   }
 
 
+  function formatDateBR(value){
+    const v=String(value||'').trim();
+    if(/^\d{2}\/\d{2}\/\d{4}$/.test(v))return v;
+    const m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m?`${m[3]}/${m[2]}/${m[1]}`:v;
+  }
+  function maskDateBR(value){
+    const d=String(value||'').replace(/\D/g,'').slice(0,8);
+    if(d.length<=2)return d;
+    if(d.length<=4)return `${d.slice(0,2)}/${d.slice(2)}`;
+    return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`;
+  }
   function load(){
     try{
       const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
@@ -536,7 +549,7 @@
     }catch(_){ }
     $('#mission-name').value=mission.metadata.name||'';
     $('#mission-number').value=mission.metadata.number||'';
-    $('#mission-date').value=mission.metadata.date||'';
+    $('#mission-date').value=formatDateBR(mission.metadata.date||'');
     const latParts=decimalToFmsOrBlank(mission.metadata.stationLat,'lat'),lonParts=decimalToFmsOrBlank(mission.metadata.stationLon,'lon');
     $('#station-lat-deg').value=latParts.deg;$('#station-lat-min').value=latParts.min;$('#station-lat-hemi').value=latParts.hemi;
     $('#station-lon-deg').value=lonParts.deg;$('#station-lon-min').value=lonParts.min;$('#station-lon-hemi').value=lonParts.hemi;
@@ -611,9 +624,10 @@
     mission.activities.forEach(a=>{
       const color=a.tx==='TX2'?'var(--red)':'var(--blue)';
       const active=a.id===mission.activeId, upcoming=nxt&&a.id===nxt.id;
-      const opacity=a.done?.25:(active?1:(upcoming?.88:.50));
-      const width=active?11:(upcoming?6:4);
-      drawActivity(a,color,0,opacity,width,Boolean(upcoming&&!a.done));
+      const opacity=active?1:(a.done?.25:(upcoming?.88:.50));
+      // A passagem ativa permanece em destaque; todas as demais têm a mesma espessura da rosa dos ventos.
+      const width=active?7:1;
+      drawActivity(a,color,0,opacity,width,false);
       drawLabel(a);
     });
     drawAircraft();
@@ -677,10 +691,29 @@
   }
   function stopGnss(){if(gnssWatchId!==null&&navigator.geolocation)navigator.geolocation.clearWatch(gnssWatchId);gnssWatchId=null;lastPosition=null;$('#gnss-toggle').textContent='Ativar posição GNSS';$('#gnss-readout').innerHTML='<strong>GNSS desligado</strong><br>Informe as coordenadas do auxílio na página Missão.';drawAircraft();}
   function toggleGnss(){
-    if(gnssWatchId!==null){stopGnss();return;}if(!stationCoords()){alert('Informe primeiro a latitude e a longitude do auxílio na página Missão.');showPage('mission');return;}
+    if(gnssWatchId!==null){stopGnss();return;}
+    if(!stationCoords()){alert('Informe primeiro a latitude e a longitude do auxílio na página Missão.');showPage('mission');return;}
     if(!navigator.geolocation){alert('Geolocalização não disponível neste aparelho.');return;}
-    $('#gnss-toggle').textContent='Desativar posição GNSS';$('#gnss-readout').innerHTML='<strong>Solicitando posição…</strong>';
-    gnssWatchId=navigator.geolocation.watchPosition(pos=>{lastPosition=pos;updateGnssReadout();drawAircraft();},err=>{const msg=err.code===1?'Permissão de localização negada. Ative a Localização para este app/site nos Ajustes do iPhone.':'Não foi possível obter a posição GNSS.';$('#gnss-readout').innerHTML=`<strong>${msg}</strong>`;},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+    $('#gnss-toggle').textContent='Desativar posição GNSS';
+    $('#gnss-readout').innerHTML='<strong>Solicitando posição…</strong>';
+    // Primeiro obtém uma posição. No iOS, se o modo de alta precisão demorar,
+    // faz uma segunda tentativa sem exigir alta precisão e então mantém o acompanhamento.
+    let cancelled=false;
+    const accept=pos=>{if(cancelled)return;lastPosition=pos;updateGnssReadout();drawAircraft();startWatch();};
+    const startWatch=()=>{
+      if(cancelled||gnssWatchId!==null)return;
+      gnssWatchId=navigator.geolocation.watchPosition(pos=>{lastPosition=pos;updateGnssReadout();drawAircraft();},err=>{
+        if(err.code===1){$('#gnss-readout').innerHTML='<strong>Permissão de localização negada.</strong><br>Ative a Localização para este app/site nos Ajustes do iPhone.';}
+      },{enableHighAccuracy:true,maximumAge:2000,timeout:30000});
+    };
+    navigator.geolocation.getCurrentPosition(accept,err=>{
+      if(err.code===1){$('#gnss-toggle').textContent='Ativar posição GNSS';$('#gnss-readout').innerHTML='<strong>Permissão de localização negada.</strong><br>Ative a Localização para este app/site nos Ajustes do iPhone.';return;}
+      navigator.geolocation.getCurrentPosition(accept,err2=>{
+        $('#gnss-toggle').textContent='Ativar posição GNSS';
+        const msg=err2.code===1?'Permissão de localização negada.':'Não foi possível obter a posição GNSS. Verifique a Localização do aparelho e tente novamente.';
+        $('#gnss-readout').innerHTML=`<strong>${msg}</strong>`;
+      },{enableHighAccuracy:false,maximumAge:15000,timeout:15000});
+    },{enableHighAccuracy:true,maximumAge:2000,timeout:12000});
   }
   function directionLabel(a){
     if(a.type==='arc')return a.direction==='ccw'?'ANTI-HORÁRIO':'HORÁRIO';
@@ -989,9 +1022,10 @@
     save();resetForm();fitMission();renderAll();
   });
   $('#cancel-edit').addEventListener('click',resetForm);
+  $('#mission-date').addEventListener('input',e=>{const pos=e.target.selectionStart;e.target.value=maskDateBR(e.target.value);});
   ['#mission-name','#mission-number','#mission-date','#station-lat-deg','#station-lat-min','#station-lat-hemi','#station-lon-deg','#station-lon-min','#station-lon-hemi','#station-magvar','#station-magvar-hemi'].forEach(selector=>$(selector).addEventListener('input',()=>{const st=stationCoords();mission.metadata={name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value,stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};save();if(lastPosition){updateGnssReadout();drawAircraft();}}));
   $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão? A missão atual continuará na lista somente se tiver sido salva.'))return;mission={savedMissionId:null,metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};save();load();resetForm();fitMission();renderAll();renderSavedMissions();});
-  $('#save-mission').addEventListener('click',saveMissionToLibrary);$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
+  $('#save-mission').addEventListener('click',saveMissionToLibrary);$('#mission-ok').addEventListener('click',()=>showPage('plan'));$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
   document.querySelectorAll('[data-plan-dir]').forEach(b=>b.addEventListener('click',()=>setPlanDirection(b.dataset.planDir)));
   syncPlanDirectionUI();
   $('#gnss-toggle').addEventListener('click',toggleGnss);
