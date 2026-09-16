@@ -691,29 +691,10 @@
   }
   function stopGnss(){if(gnssWatchId!==null&&navigator.geolocation)navigator.geolocation.clearWatch(gnssWatchId);gnssWatchId=null;lastPosition=null;$('#gnss-toggle').textContent='Ativar posição GNSS';$('#gnss-readout').innerHTML='<strong>GNSS desligado</strong><br>Informe as coordenadas do auxílio na página Missão.';drawAircraft();}
   function toggleGnss(){
-    if(gnssWatchId!==null){stopGnss();return;}
-    if(!stationCoords()){alert('Informe primeiro a latitude e a longitude do auxílio na página Missão.');showPage('mission');return;}
+    if(gnssWatchId!==null){stopGnss();return;}if(!stationCoords()){alert('Informe primeiro a latitude e a longitude do auxílio na página Missão.');showPage('mission');return;}
     if(!navigator.geolocation){alert('Geolocalização não disponível neste aparelho.');return;}
-    $('#gnss-toggle').textContent='Desativar posição GNSS';
-    $('#gnss-readout').innerHTML='<strong>Solicitando posição…</strong>';
-    // Primeiro obtém uma posição. No iOS, se o modo de alta precisão demorar,
-    // faz uma segunda tentativa sem exigir alta precisão e então mantém o acompanhamento.
-    let cancelled=false;
-    const accept=pos=>{if(cancelled)return;lastPosition=pos;updateGnssReadout();drawAircraft();startWatch();};
-    const startWatch=()=>{
-      if(cancelled||gnssWatchId!==null)return;
-      gnssWatchId=navigator.geolocation.watchPosition(pos=>{lastPosition=pos;updateGnssReadout();drawAircraft();},err=>{
-        if(err.code===1){$('#gnss-readout').innerHTML='<strong>Permissão de localização negada.</strong><br>Ative a Localização para este app/site nos Ajustes do iPhone.';}
-      },{enableHighAccuracy:true,maximumAge:2000,timeout:30000});
-    };
-    navigator.geolocation.getCurrentPosition(accept,err=>{
-      if(err.code===1){$('#gnss-toggle').textContent='Ativar posição GNSS';$('#gnss-readout').innerHTML='<strong>Permissão de localização negada.</strong><br>Ative a Localização para este app/site nos Ajustes do iPhone.';return;}
-      navigator.geolocation.getCurrentPosition(accept,err2=>{
-        $('#gnss-toggle').textContent='Ativar posição GNSS';
-        const msg=err2.code===1?'Permissão de localização negada.':'Não foi possível obter a posição GNSS. Verifique a Localização do aparelho e tente novamente.';
-        $('#gnss-readout').innerHTML=`<strong>${msg}</strong>`;
-      },{enableHighAccuracy:false,maximumAge:15000,timeout:15000});
-    },{enableHighAccuracy:true,maximumAge:2000,timeout:12000});
+    $('#gnss-toggle').textContent='Desativar posição GNSS';$('#gnss-readout').innerHTML='<strong>Solicitando posição…</strong>';
+    gnssWatchId=navigator.geolocation.watchPosition(pos=>{lastPosition=pos;updateGnssReadout();drawAircraft();},err=>{const msg=err.code===1?'Permissão de localização negada. Ative a Localização para este app/site nos Ajustes do iPhone.':'Não foi possível obter a posição GNSS.';$('#gnss-readout').innerHTML=`<strong>${msg}</strong>`;},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
   }
   function directionLabel(a){
     if(a.type==='arc')return a.direction==='ccw'?'ANTI-HORÁRIO':'HORÁRIO';
