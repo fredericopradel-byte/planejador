@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>IV-PLANNER</title>
-<meta name="iv-planner-build" content="2.8">
+<meta name="iv-planner-build" content="2.9">
 <style>
   :root{color-scheme:light dark;--bg:#eeeeef;--panel:#fafafa;--text:#252629;--muted:#696b70;--border:#b8b9bd;--accent:#b3262d;--blue:#1473e6;--red:#c62830;--danger:#9f1f25;--soft:#e2e2e4}
   *{box-sizing:border-box}
@@ -619,6 +619,14 @@
     const deg=num(degValue),min=num(minValue),limit=isLat?90:180;if(!Number.isFinite(deg)||!Number.isFinite(min)||deg<0||deg>limit||min<0||min>=60||(deg===limit&&min>0))return NaN;
     const sign=(hemi==='S'||hemi==='W')?-1:1;return sign*(deg+min/60);
   }
+
+  function decimalToFmsOrBlank(value,isLon=false){
+    if(value===''||value===null||value===undefined||!Number.isFinite(Number(value))){
+      return {deg:'',min:'',hemi:isLon?'W':'S'};
+    }
+    return decimalToFms(Number(value),isLon);
+  }
+
   function decimalToFms(value,type){
     const v=Number(value);if(!Number.isFinite(v))return{deg:'',min:'',hemi:type==='lat'?'S':'W'};const abs=Math.abs(v),deg=Math.floor(abs),min=((abs-deg)*60).toFixed(2);return{deg:String(deg).padStart(type==='lat'?2:3,'0'),min,hemi:type==='lat'?(v<0?'S':'N'):(v<0?'W':'E')};
   }
@@ -674,29 +682,7 @@
   function setPlanDirection(dir){
     planDirection=dir;
   
-  function installCoordinateAutoClear(){
-    const ids=['station-lat-deg','station-lat-min','station-lon-deg','station-lon-min'];
-    ids.forEach(id=>{
-      const el=$('#'+id);if(!el)return;
-      el.addEventListener('focus',()=>{
-        const raw=String(el.value||'').trim().replace(',','.');
-        if(raw!=='' && Number(raw)===0){
-          el.dataset.wasZero='1';
-          el.value='';
-        }
-      });
-      el.addEventListener('blur',()=>{
-        // Se o piloto não digitou nada, volta a mostrar zero em repouso.
-        if(String(el.value||'').trim()===''){
-          if(id==='station-lat-deg')el.value='00';
-          else if(id==='station-lon-deg')el.value='000';
-          else el.value='0,00';
-        }
-      });
-    });
-  }
 
-  installCoordinateAutoClear();
   document.querySelectorAll('[data-plan-dir]').forEach(b=>b.classList.toggle('selected',b.dataset.planDir===dir));
   }
   function syncPlanDirectionUI(){
