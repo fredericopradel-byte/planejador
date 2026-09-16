@@ -116,7 +116,7 @@
     label>input,label>select,label>textarea{margin-top:2px}
 
     /* MISSÃO: usa largura horizontal sem empilhar tudo */
-    #page-mission .metadata{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:6px}
+    #page-mission .metadata{display:grid;grid-template-columns:1.35fr .65fr;gap:6px}
     #page-mission .metadata label{min-width:0}
     #page-mission .metadata label:first-child{grid-column:1/-1}
     #page-mission .metadata label:last-child{grid-column:auto}
@@ -258,9 +258,10 @@
   }
 
   @media (max-width:570px){
-    #page-mission .metadata{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+    #page-mission .metadata{grid-template-columns:1.35fr .65fr!important}
     #page-mission .metadata label{min-width:0}
-    #mission-date{font-size:13px!important;padding-left:6px!important;padding-right:3px!important}
+    #page-mission .metadata>label:last-child{min-width:0;overflow:hidden;padding-right:3px}
+    #mission-date{display:block;inline-size:100%!important;width:100%!important;max-inline-size:100%!important;max-width:100%!important;min-inline-size:0!important;min-width:0!important;box-sizing:border-box!important;font-size:13px!important;padding-left:6px!important;padding-right:3px!important}
     .rose-toolbar{grid-template-columns:34px 40px 34px 1fr 1fr 1fr 1fr!important}
     .rose-toolbar button{font-size:9px!important;padding:3px!important}
     .flight-step-panel{grid-template-columns:1fr auto;gap:5px;padding:6px}
@@ -536,7 +537,7 @@
     $('#mission-name').value=mission.metadata.name||'';
     $('#mission-number').value=mission.metadata.number||'';
     $('#mission-date').value=mission.metadata.date||'';
-    const latParts=decimalToFms(mission.metadata.stationLat,'lat'),lonParts=decimalToFms(mission.metadata.stationLon,'lon');
+    const latParts=decimalToFmsOrBlank(mission.metadata.stationLat,'lat'),lonParts=decimalToFmsOrBlank(mission.metadata.stationLon,'lon');
     $('#station-lat-deg').value=latParts.deg;$('#station-lat-min').value=latParts.min;$('#station-lat-hemi').value=latParts.hemi;
     $('#station-lon-deg').value=lonParts.deg;$('#station-lon-min').value=lonParts.min;$('#station-lon-hemi').value=lonParts.hemi;
     $('#station-magvar').value=mission.metadata.magVar??'';
@@ -626,11 +627,11 @@
     const sign=(hemi==='S'||hemi==='W')?-1:1;return sign*(deg+min/60);
   }
 
-  function decimalToFmsOrBlank(value,isLon=false){
+  function decimalToFmsOrBlank(value,type){
     if(value===''||value===null||value===undefined||!Number.isFinite(Number(value))){
-      return {deg:'',min:'',hemi:isLon?'W':'S'};
+      return {deg:'',min:'',hemi:type==='lon'?'W':'S'};
     }
-    return decimalToFms(Number(value),isLon);
+    return decimalToFms(Number(value),type);
   }
 
   function decimalToFms(value,type){
