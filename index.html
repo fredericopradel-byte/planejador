@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>IV-PLANNER</title>
-<meta name="iv-planner-build" content="2.7">
+<meta name="iv-planner-build" content="2.8">
 <style>
   :root{color-scheme:light dark;--bg:#eeeeef;--panel:#fafafa;--text:#252629;--muted:#696b70;--border:#b8b9bd;--accent:#b3262d;--blue:#1473e6;--red:#c62830;--danger:#9f1f25;--soft:#e2e2e4}
   *{box-sizing:border-box}
@@ -673,7 +673,31 @@
   }
   function setPlanDirection(dir){
     planDirection=dir;
-    document.querySelectorAll('[data-plan-dir]').forEach(b=>b.classList.toggle('selected',b.dataset.planDir===dir));
+  
+  function installCoordinateAutoClear(){
+    const ids=['station-lat-deg','station-lat-min','station-lon-deg','station-lon-min'];
+    ids.forEach(id=>{
+      const el=$('#'+id);if(!el)return;
+      el.addEventListener('focus',()=>{
+        const raw=String(el.value||'').trim().replace(',','.');
+        if(raw!=='' && Number(raw)===0){
+          el.dataset.wasZero='1';
+          el.value='';
+        }
+      });
+      el.addEventListener('blur',()=>{
+        // Se o piloto não digitou nada, volta a mostrar zero em repouso.
+        if(String(el.value||'').trim()===''){
+          if(id==='station-lat-deg')el.value='00';
+          else if(id==='station-lon-deg')el.value='000';
+          else el.value='0,00';
+        }
+      });
+    });
+  }
+
+  installCoordinateAutoClear();
+  document.querySelectorAll('[data-plan-dir]').forEach(b=>b.classList.toggle('selected',b.dataset.planDir===dir));
   }
   function syncPlanDirectionUI(){
     const type=$('#activity-type').value||'radial';
