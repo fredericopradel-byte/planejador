@@ -10,7 +10,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>IV-PLANNER</title>
-<meta name="iv-planner-build" content="3.0-gnssfix">
+<!-- TESTE GNSS: núcleo de coordenadas restaurado do index.8 funcional -->
+<meta name="iv-planner-build" content="3.0">
 <style>
   :root{color-scheme:light dark;--bg:#eeeeef;--panel:#fafafa;--text:#252629;--muted:#696b70;--border:#b8b9bd;--accent:#b3262d;--blue:#1473e6;--red:#c62830;--danger:#9f1f25;--soft:#e2e2e4}
   *{box-sizing:border-box}
@@ -550,7 +551,7 @@
     $('#mission-name').value=mission.metadata.name||'';
     $('#mission-number').value=mission.metadata.number||'';
     $('#mission-date').value=formatDateBR(mission.metadata.date||'');
-    const latParts=decimalToFmsOrBlank(mission.metadata.stationLat,'lat'),lonParts=decimalToFmsOrBlank(mission.metadata.stationLon,'lon');
+    const latParts=(mission.metadata.stationLat===''||mission.metadata.stationLat===null||mission.metadata.stationLat===undefined)?{deg:'',min:'',hemi:'S'}:decimalToFms(mission.metadata.stationLat,'lat'),lonParts=(mission.metadata.stationLon===''||mission.metadata.stationLon===null||mission.metadata.stationLon===undefined)?{deg:'',min:'',hemi:'W'}:decimalToFms(mission.metadata.stationLon,'lon');
     $('#station-lat-deg').value=latParts.deg;$('#station-lat-min').value=latParts.min;$('#station-lat-hemi').value=latParts.hemi;
     $('#station-lon-deg').value=lonParts.deg;$('#station-lon-min').value=lonParts.min;$('#station-lon-hemi').value=lonParts.hemi;
     $('#station-magvar').value=mission.metadata.magVar??'';
@@ -641,11 +642,11 @@
     const sign=(hemi==='S'||hemi==='W')?-1:1;return sign*(deg+min/60);
   }
 
-  function decimalToFmsOrBlank(value,type){
+  function decimalToFmsOrBlank(value,isLon=false){
     if(value===''||value===null||value===undefined||!Number.isFinite(Number(value))){
-      return {deg:'',min:'',hemi:type==='lon'?'W':'S'};
+      return {deg:'',min:'',hemi:isLon?'W':'S'};
     }
-    return decimalToFms(Number(value),type);
+    return decimalToFms(Number(value),isLon);
   }
 
   function decimalToFms(value,type){
