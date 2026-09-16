@@ -2,8 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#194f87">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#b3262d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="IV-PLANNER">
@@ -88,6 +88,118 @@
   .gnss-status strong{font-size:15px}
   .gnss-warning{font-size:12px;color:var(--muted);margin-top:8px}
   @media(prefers-color-scheme:dark){:root{--bg:#161719;--panel:#232427;--text:#f1f1f2;--muted:#a7a8ac;--border:#55575c;--accent:#d13a42;--blue:#56a6ff;--red:#ef535a;--danger:#ff6b71;--soft:#343538}}
+
+
+  /* IV-PLANNER — otimização mobile/iPhone */
+  @media (max-width:570px){
+    html,body{min-height:100%;overscroll-behavior-y:none}
+    body{-webkit-text-size-adjust:100%}
+    .app{max-width:none;padding:7px 8px calc(72px + env(safe-area-inset-bottom));}
+    .topbar{margin:0 2px 7px;display:block}
+    h1{font-size:19px;line-height:1.05;margin:0;font-weight:700;letter-spacing:.2px}
+    .subtitle{font-size:11px;line-height:1.2;margin-top:2px}
+    h2{font-size:15px;margin-bottom:8px}
+    .panel{border-radius:10px;padding:10px;margin-bottom:8px}
+    .page-heading{margin-bottom:8px}
+
+    /* barra inferior sempre acessível e segura no iPhone */
+    .page-nav{position:fixed;left:0;right:0;bottom:0;top:auto;margin:0;padding:5px 6px calc(5px + env(safe-area-inset-bottom));background:color-mix(in srgb,var(--panel) 96%,transparent);border-top:1px solid var(--border);z-index:100;gap:3px;box-shadow:0 -3px 12px rgba(0,0,0,.08)}
+    .page-nav button{min-height:44px;padding:4px 2px;font-size:11px;line-height:1.05;border:0;background:transparent;border-radius:8px}
+    .page-nav button.active{background:var(--accent);color:#fff}
+
+    /* controles com alvo de toque adequado, mas mais compactos */
+    button{min-height:40px;padding:6px 9px;border-radius:8px}
+    input,select,textarea{min-height:40px;padding:6px 8px;font-size:16px} /* 16px evita zoom automático do iOS */
+    textarea{min-height:40px;max-height:70px}
+    label{font-size:11px}
+    label>input,label>select,label>textarea{margin-top:2px}
+
+    /* MISSÃO: usa largura horizontal sem empilhar tudo */
+    #page-mission .metadata{display:grid;grid-template-columns:1.35fr .65fr;gap:6px}
+    #page-mission .metadata label:first-child{grid-column:1/-1}
+    #page-mission .metadata label:last-child{grid-column:auto}
+    .gnss-grid{display:grid;grid-template-columns:1fr;gap:6px;margin-top:7px}
+    .coord-box{padding:7px;border-radius:8px}
+    .coord-title{font-size:11px;margin-bottom:4px;line-height:1.15}
+    .coord-parts,.coord-parts.lon{grid-template-columns:.68fr 1fr .62fr;gap:5px}
+    .coord-parts label{font-size:10px}
+    .coord-parts input,.coord-parts select{min-height:36px;padding:5px 6px}
+    .gnss-grid .coord-box:last-child .coord-parts{grid-template-columns:1fr .72fr;max-width:245px}
+    .mission-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+    .mission-actions button{width:100%;min-height:40px;font-size:12px;padding:5px}
+    #new-mission{grid-column:1/-1}
+
+    /* PLANEJAR: campos essenciais lado a lado */
+    #page-plan .panel{padding:9px}
+    #page-plan #form-title{margin-bottom:7px}
+    .type-choice{gap:6px;margin-bottom:7px}
+    .type-choice button{min-height:39px;font-size:12px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+    .activity-fields{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:7px}
+    .activity-fields h3{grid-column:1/-1;font-size:12px;margin:0 0 1px}
+    .activity-fields label{min-width:0}
+    .activity-fields input{padding-left:5px;padding-right:5px}
+    .form-grid>.full{grid-column:1/-1}
+    .tx-plan{grid-column:1/-1;min-height:34px;gap:14px;padding:0 2px}
+    .tx-plan label{font-size:12px;gap:5px}
+    input[type=checkbox]{width:22px;height:22px}
+    .error{font-size:11px;min-height:14px;margin-top:4px}
+    .form-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:5px}
+    .form-actions button{width:100%;font-size:12px}
+    #cancel-edit[hidden]{display:none}
+    #cancel-edit[hidden]+*{grid-column:auto}
+
+    /* MAPA: prioriza área gráfica no viewport */
+    #page-rose .rose-panel{margin:0;max-width:none;padding:7px;min-height:calc(100dvh - 116px);display:flex;flex-direction:column;overflow:hidden}
+    #page-rose .summary{margin-bottom:4px;gap:4px;align-items:center}
+    #page-rose .summary h2{margin:0;font-size:14px}
+    #page-rose .summary>div{font-size:10px}
+    .rose-toolbar{display:grid;grid-template-columns:40px 46px 40px 1fr 1fr;gap:4px;margin-bottom:4px}
+    .rose-toolbar button{min-height:34px;padding:3px 4px;font-size:10px}
+    .zoom-level{min-width:0;font-size:10px;align-self:center}
+    .gnss-status{display:grid;grid-template-columns:auto 1fr;column-gap:7px;row-gap:2px;margin-top:0;margin-bottom:4px;padding:5px 6px;font-size:10px;line-height:1.15}
+    #gnss-toggle{grid-row:1/3;align-self:center;min-height:36px;font-size:10px;padding:4px 7px}
+    #gnss-readout{margin-top:0!important;align-self:center;min-width:0}
+    #gnss-readout strong{font-size:11px}
+    .gnss-warning{grid-column:1/-1;font-size:8px;margin-top:2px;text-align:center;line-height:1.05}
+    #rose{flex:1 1 auto;width:100%;height:min(58dvh,calc(100dvh - 255px));min-height:280px;object-fit:contain}
+    .legend{gap:9px;font-size:9px;margin-top:2px;line-height:1}
+    .swatch{width:18px;height:3px}
+
+    /* EXECUÇÃO: transforma a tabela larga em cartões operacionais */
+    #page-execution .panel{padding:8px}
+    #page-execution .summary{margin-bottom:6px;align-items:center}
+    #page-execution .summary h2{margin:0;font-size:14px}
+    #page-execution .summary>div{font-size:11px}
+    #page-execution .table-wrap{margin:0;padding:0;overflow:visible}
+    #page-execution table,#page-execution tbody{display:block;width:100%}
+    #page-execution thead{display:none}
+    #page-execution tr{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:3px 5px;border:1px solid var(--border);border-radius:9px;padding:7px;margin-bottom:6px;background:var(--panel)}
+    #page-execution td{border:0;padding:2px;min-width:0}
+    #page-execution td.activity-title{grid-column:1/3;font-size:13px;white-space:normal;align-self:center}
+    #page-execution td.activity-detail{grid-column:1/-1;grid-row:2;font-size:10px;color:var(--muted);min-width:0;white-space:normal;line-height:1.2}
+    #page-execution td.check{min-width:0;grid-row:3;position:relative;padding-top:15px}
+    #page-execution td.check::before{position:absolute;top:1px;left:0;right:0;text-align:center;font-size:8px;color:var(--muted);font-weight:600}
+    #page-execution td.check:nth-child(3)::before{content:'TX1 PLAN'}
+    #page-execution td.check:nth-child(4)::before{content:'TX1 FEITO'}
+    #page-execution td.check:nth-child(5)::before{content:'TX2 PLAN'}
+    #page-execution td.check:nth-child(6)::before{content:'TX2 FEITO'}
+    #page-execution td.check label{min-height:32px}
+    #page-execution td:last-child{grid-column:3/5;grid-row:1;justify-self:end}
+    #page-execution .row-actions{gap:4px}
+    #page-execution .row-actions button{min-height:32px;padding:3px 6px;font-size:9px}
+    #page-execution tr.done{opacity:.48}
+    #page-execution tr.selected{outline:2px solid var(--accent);outline-offset:-1px}
+    #page-execution tr:has(td.empty){display:block;padding:18px}
+    #page-execution td.empty{display:block;text-align:center;font-size:12px}
+  }
+
+  /* telas móveis muito baixas: ganha mais área útil sem comprometer controles */
+  @media (max-width:570px) and (max-height:760px){
+    .subtitle{display:none}.topbar{margin-bottom:4px}
+    #page-rose .rose-panel{min-height:calc(100dvh - 96px)}
+    #rose{min-height:235px;height:calc(100dvh - 225px)}
+  }
 </style>
 </head>
 <body>
@@ -206,7 +318,7 @@
       </div>
       <svg id="rose" viewBox="0 0 500 500" role="img" aria-labelledby="rose-title rose-desc">
         <title id="rose-title">Mapa de radiais da missão</title>
-        <desc id="rose-desc">Radiais planejadas no TX1 aparecem em cinza e no TX2 em vermelho.</desc>
+        <desc id="rose-desc">Radiais planejadas no TX1 aparecem em azul e no TX2 em vermelho.</desc>
         <g id="rose-grid"></g><g id="rose-lines"></g><g id="aircraft-layer"></g>
       </svg>
       <div class="legend">
