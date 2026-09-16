@@ -214,7 +214,11 @@
   #active-step-text,#next-step-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}
   .step-now.active-tx1{border-left:4px solid var(--blue);padding-left:7px}
   .step-now.active-tx2{border-left:4px solid var(--red);padding-left:7px}
+  .step-controls{display:grid;grid-template-columns:34px auto 34px 34px;gap:4px;align-items:center}
+  .step-controls button{min-height:34px;padding:4px 7px;font-size:11px;font-weight:800}
+  .step-controls #step-prev,.step-controls #step-next,.step-controls #step-undo{font-size:17px;padding:2px}
 
+  .direction-plan-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:5px 0 8px}.direction-plan-row .hint{font-size:10px;color:var(--muted)}
   .execution-list{display:flex;flex-direction:column;gap:8px}
   .exec-card{display:grid;grid-template-columns:38px 1fr auto;gap:8px;align-items:center;
     border:1px solid var(--border);border-radius:11px;padding:9px;background:var(--panel);
@@ -255,7 +259,9 @@
     .rose-toolbar button{font-size:9px!important;padding:3px!important}
     .flight-step-panel{grid-template-columns:1fr auto;gap:5px;padding:6px}
     .step-next{grid-column:1}
-    #complete-next{grid-column:2;grid-row:1/3;min-height:48px;font-size:9px;padding:4px 6px}
+    .step-controls{grid-column:2;grid-row:1/3;grid-template-columns:28px auto 28px 28px;gap:3px}
+    .step-controls button{min-height:42px;padding:3px 5px;font-size:9px}
+    .step-controls #step-prev,.step-controls #step-next,.step-controls #step-undo{font-size:16px}
     #active-step-text,#next-step-text{font-size:10px}
     .exec-card{grid-template-columns:32px 1fr;gap:5px;padding:7px}
     .exec-actions{grid-column:2;justify-content:flex-start}
@@ -332,7 +338,11 @@
         </div>
         <div class="form-grid">
           <input id="activity-type" type="hidden" value="radial">
-          <div id="radial-fields" class="activity-fields">
+          <div class="direction-plan-row">
+        <button id="reverse-direction-plan" type="button" class="small">↔ Trocar direção voada</button>
+        <span class="hint">Radial: inbound/outbound · Arco: horário/anti-horário</span>
+      </div>
+      <div id="radial-fields" class="activity-fields">
             <h3>Dados da radial</h3>
             <label>Azimute da radial (°)<input id="radial-az" type="number" min="0" max="359.9" step="0.1" inputmode="decimal" placeholder="090"></label>
             <label>Distância inicial (NM)<input id="radial-start" type="number" min="0" max="500" step="0.1" inputmode="decimal" placeholder="5"></label>
@@ -384,7 +394,12 @@
           <span class="step-kicker">PRÓXIMA</span>
           <span id="next-step-text">—</span>
         </div>
-        <button class="primary" id="complete-next" type="button">Concluir / Próxima →</button>
+        <div class="step-controls" aria-label="Controles da etapa ativa">
+          <button id="step-prev" type="button" title="Etapa anterior">←</button>
+          <button class="primary" id="step-complete" type="button">Concluir</button>
+          <button id="step-next" type="button" title="Próxima etapa">→</button>
+          <button id="step-undo" type="button" title="Desfazer última conclusão">↶</button>
+        </div>
       </div>
       <div class="gnss-status">
         <button class="primary" id="gnss-toggle" type="button">Ativar posição GNSS</button>
@@ -428,16 +443,17 @@
   let currentPage='mission';
   let gnssWatchId=null, lastPosition=null;
   let dragState=null;
+  let completionHistory=[];
 
   function migrateActivities(){
     const out=[];
     (mission.activities||[]).forEach(a=>{
       if(a.tx==='TX1'||a.tx==='TX2'){
-        out.push({...a,done:Boolean(a.done)});
+        out.push({...a,done:Boolean(a.done),direction:a.direction||(a.type==='arc'?'cw':'outbound')});
         return;
       }
-      if(a.tx1Planned) out.push({...a,id:`${a.id}-tx1`,sourceId:a.id,tx:'TX1',done:Boolean(a.tx1Done)});
-      if(a.tx2Planned) out.push({...a,id:`${a.id}-tx2`,sourceId:a.id,tx:'TX2',done:Boolean(a.tx2Done)});
+      if(a.tx1Planned) out.push({...a,id:`${a.id}-tx1`,sourceId:a.id,tx:'TX1',done:Boolean(a.tx1Done),direction:a.direction||(a.type==='arc'?'cw':'outbound')});
+      if(a.tx2Planned) out.push({...a,id:`${a.id}-tx2`,sourceId:a.id,tx:'TX2',done:Boolean(a.tx2Done),direction:a.direction||(a.type==='arc'?'cw':'outbound')});
     });
     mission.activities=out;
     if(!mission.activeId || !mission.activities.some(a=>a.id===mission.activeId && !a.done)){
@@ -607,12 +623,57 @@
     $('#gnss-toggle').textContent='Desativar posição GNSS';$('#gnss-readout').innerHTML='<strong>Solicitando posição…</strong>';
     gnssWatchId=navigator.geolocation.watchPosition(pos=>{lastPosition=pos;updateGnssReadout();drawAircraft();},err=>{const msg=err.code===1?'Permissão de localização negada. Ative a Localização para este app/site nos Ajustes do iPhone.':'Não foi possível obter a posição GNSS.';$('#gnss-readout').innerHTML=`<strong>${msg}</strong>`;},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
   }
-  function segmentText(a){return a.type==='arc'?`Arco ${fmt(a.arcStart)}°→${fmt(a.arcEnd)}° / D${fmt(a.radius)}`:`RDL ${fmt(a.azimuth)}° / D${fmt(a.start)}→D${fmt(a.end)}`;}
+  function directionLabel(a){
+    if(a.type==='arc')return a.direction==='ccw'?'ANTI-HORÁRIO':'HORÁRIO';
+    return a.direction==='inbound'?'INBOUND':'OUTBOUND';
+  }
+  function toggleDirection(id){
+    const a=mission.activities.find(x=>x.id===id);if(!a)return;
+    a.direction=a.type==='arc'?(a.direction==='ccw'?'cw':'ccw'):(a.direction==='inbound'?'outbound':'inbound');
+    save();renderAll();
+  }
+  function reversePlannedGeometry(){
+    const type=document.querySelector('input[name="activity-type"]:checked')?.value||'radial';
+    if(type==='arc'){
+      const s=$('#arc-start'),e=$('#arc-end');const t=s.value;s.value=e.value;e.value=t;
+    }else{
+      const s=$('#radial-start'),e=$('#radial-end');const t=s.value;s.value=e.value;e.value=t;
+    }
+  }
+  function segmentText(a){
+    if(a.type==='arc'){
+      const s=a.direction==='ccw'?a.arcEnd:a.arcStart,e=a.direction==='ccw'?a.arcStart:a.arcEnd;
+      return `Arco ${fmt(s)}°→${fmt(e)}° / D${fmt(a.radius)} · ${directionLabel(a)}`;
+    }
+    const s=a.direction==='inbound'?a.end:a.start,e=a.direction==='inbound'?a.start:a.end;
+    return `RDL ${fmt(a.azimuth)}° / D${fmt(s)}→D${fmt(e)} · ${directionLabel(a)}`;
+  }
   function actionButton(text,handler,kind=''){const b=document.createElement('button');b.type='button';b.className=`small ${kind}`;b.textContent=text;b.addEventListener('click',e=>{e.stopPropagation();handler();});return b;}
   function setActive(id){const a=mission.activities.find(x=>x.id===id);if(!a||a.done)return;mission.activeId=id;save();renderAll();}
   function completeActive(){
-    ensureActive();const a=activeStep();if(!a)return;
+    ensureActive();const a=activeStep();if(!a||a.done)return;
+    completionHistory.push({id:a.id,activeId:a.id});
     a.done=true;const n=nextStep();mission.activeId=n?n.id:null;save();renderAll();
+  }
+  function undoComplete(){
+    let rec=completionHistory.pop();
+    let a=rec&&mission.activities.find(x=>x.id===rec.id);
+    if(!a){
+      for(let i=mission.activities.length-1;i>=0;i--){
+        if(mission.activities[i].done){a=mission.activities[i];break;}
+      }
+    }
+    if(!a)return;
+    a.done=false;mission.activeId=a.id;save();renderAll();
+  }
+  function moveActive(direction){
+    if(!mission.activities.length)return;
+    let i=activeIndex();
+    if(i<0)i=0;
+    const ni=i+direction;
+    if(ni<0||ni>=mission.activities.length)return;
+    mission.activeId=mission.activities[ni].id;
+    save();renderAll();
   }
   function renderFlightStepPanel(){
     const a=activeStep(),n=nextStep(),now=$('#active-step-text'),next=$('#next-step-text'),wrap=$('.step-now');
@@ -621,7 +682,11 @@
     if(a){now.textContent=`${String(activeIndex()+1).padStart(2,'0')} · ${segmentText(a)} · ${a.tx}`;wrap.classList.add(a.tx==='TX2'?'active-tx2':'active-tx1');}
     else now.textContent='Missão concluída / nenhuma etapa ativa';
     next.textContent=n?`${String(mission.activities.indexOf(n)+1).padStart(2,'0')} · ${segmentText(n)} · ${n.tx}`:'—';
-    $('#complete-next').disabled=!a;
+    const i=activeIndex();
+    $('#step-complete').disabled=!a||Boolean(a&&a.done);
+    $('#step-prev').disabled=i<=0;
+    $('#step-next').disabled=i<0||i>=mission.activities.length-1;
+    $('#step-undo').disabled=!mission.activities.some(x=>x.done);
   }
   function renderTable(){
     ensureActive();
@@ -635,7 +700,10 @@
       if(nxt&&a.id===nxt.id)card.classList.add('is-next');
 
       const handle=document.createElement('button');handle.type='button';handle.className='drag-handle';handle.textContent='☰';handle.title='Segure e arraste para reordenar';
-      handle.addEventListener('pointerdown',startDrag);
+      handle.addEventListener('pointerdown',startTouchDrag);
+      handle.draggable=true;
+      handle.addEventListener('dragstart',e=>startDesktopDrag(e,card));
+      handle.addEventListener('dragend',finishDesktopDrag);
 
       const main=document.createElement('div');main.className='exec-main';
       const head=document.createElement('div');head.className='exec-head';
@@ -652,6 +720,7 @@
       const actions=document.createElement('div');actions.className='exec-actions';
       if(!a.done) actions.append(actionButton(a.id===mission.activeId?'Ativa':'Tornar ativa',()=>setActive(a.id)));
       if(a.id===mission.activeId) actions.append(actionButton('Concluir',completeActive,'primary'));
+      actions.append(actionButton('↔ Direção',()=>toggleDirection(a.id)));
       actions.append(actionButton('Editar',()=>editActivity(a.id)),actionButton('Excluir',()=>deleteActivity(a.id),'danger'));
 
       card.append(handle,main,actions);
@@ -662,25 +731,43 @@
     $('#progress').textContent=`${completed}/${total} etapas feitas`;const rp=$('#progress-rose');if(rp)rp.textContent=`${completed}/${total} etapas feitas`;
     renderFlightStepPanel();
   }
-  function startDrag(event){
-    event.preventDefault();const handle=event.currentTarget,card=handle.closest('.exec-card');
+  function persistVisualOrder(){
+    const ids=[...$('#execution-list').querySelectorAll('.exec-card')].map(x=>x.dataset.id);
+    mission.activities.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));
+    save();
+  }
+  function moveDraggedCard(card,x,y){
+    const target=document.elementFromPoint(x,y)?.closest('.exec-card');
+    if(!target||target===card)return;
+    const list=$('#execution-list'),rect=target.getBoundingClientRect();
+    list.insertBefore(card,y<rect.top+rect.height/2?target:target.nextSibling);
+  }
+  function startTouchDrag(event){
+    if(event.pointerType==='mouse')return;
+    event.preventDefault();
+    const handle=event.currentTarget,card=handle.closest('.exec-card');
     handle.setPointerCapture(event.pointerId);card.classList.add('dragging');
-    dragState={pointerId:event.pointerId,card,id:card.dataset.id};
-    const move=e=>{
+    dragState={pointerId:event.pointerId,card};
+    const move=e=>{if(dragState&&e.pointerId===dragState.pointerId){e.preventDefault();moveDraggedCard(card,e.clientX,e.clientY);}};
+    const end=e=>{
       if(!dragState||e.pointerId!==dragState.pointerId)return;
-      const target=document.elementFromPoint(e.clientX,e.clientY)?.closest('.exec-card');
-      if(!target||target===card)return;
-      const list=$('#execution-list'),rect=target.getBoundingClientRect();
-      list.insertBefore(card,e.clientY<rect.top+rect.height/2?target:target.nextSibling);
+      handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',end);handle.removeEventListener('pointercancel',end);
+      card.classList.remove('dragging');dragState=null;persistVisualOrder();renderAll();
     };
-    const endDrag=e=>{
-      if(!dragState||e.pointerId!==dragState.pointerId)return;
-      handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',endDrag);handle.removeEventListener('pointercancel',endDrag);
-      card.classList.remove('dragging');
-      const ids=[...$('#execution-list').querySelectorAll('.exec-card')].map(x=>x.dataset.id);
-      mission.activities.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));dragState=null;save();renderAll();
-    };
-    handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',endDrag);handle.addEventListener('pointercancel',endDrag);
+    handle.addEventListener('pointermove',move,{passive:false});handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
+  }
+  function startDesktopDrag(event,card){
+    dragState={card};card.classList.add('dragging');
+    event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',card.dataset.id);
+    const list=$('#execution-list');
+    const over=e=>{e.preventDefault();if(dragState)moveDraggedCard(card,e.clientX,e.clientY);};
+    list._dragOver=over;list.addEventListener('dragover',over);
+  }
+  function finishDesktopDrag(){
+    const list=$('#execution-list');
+    if(list._dragOver){list.removeEventListener('dragover',list._dragOver);delete list._dragOver;}
+    if(dragState?.card)dragState.card.classList.remove('dragging');
+    dragState=null;persistVisualOrder();renderAll();
   }
   function renderAll(){renderRose();renderTable();applyView();}
   function setType(type=$('#activity-type').value){
@@ -692,7 +779,7 @@
   function resetForm(){editingId=null;$('#activity-form').reset();$('#plan-tx1').checked=true;$('#plan-tx2').checked=true;$('#activity-type').value='radial';setType();$('#form-title').textContent='Adicionar atividade';$('#save-activity').textContent='Adicionar atividade';$('#cancel-edit').hidden=true;$('#form-error').textContent='';}
   function validateActivity(){
     const type=$('#activity-type').value,description=$('#activity-description').value.trim(),notes=$('#activity-notes').value.trim();if(!description)return{error:'Informe uma descrição para a atividade.'};
-    const base={id:editingId||`a-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,description,notes,tx1Planned:$('#plan-tx1').checked,tx2Planned:$('#plan-tx2').checked};
+    const base={id:editingId||`a-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,type,description,notes,direction:(type==='arc'?'cw':'outbound'),tx1Planned:$('#plan-tx1').checked,tx2Planned:$('#plan-tx2').checked};
     if(!base.tx1Planned&&!base.tx2Planned)return{error:'Planeje a atividade em pelo menos um transmissor.'};
     if(type==='radial'){const azimuth=num($('#radial-az').value),start=num($('#radial-start').value),end=num($('#radial-end').value);if(!Number.isFinite(azimuth)||azimuth<0||azimuth>=360)return{error:'O azimute deve estar entre 0° e 359,9°.'};if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end<0||start>500||end>500||start===end)return{error:'Informe distâncias inicial e final diferentes, entre 0 e 500 NM.'};return{activity:{...base,azimuth,start,end}};}
     const arcStart=num($('#arc-start').value),arcEnd=num($('#arc-end').value),radiusNm=num($('#arc-radius').value);if(!Number.isFinite(arcStart)||!Number.isFinite(arcEnd)||arcStart<0||arcStart>=360||arcEnd<0||arcEnd>=360||arcStart===arcEnd)return{error:'Informe azimutes inicial e final válidos e diferentes.'};if(!Number.isFinite(radiusNm)||radiusNm<=0||radiusNm>500)return{error:'O raio do arco deve estar entre 0,1 e 500 NM.'};return{activity:{...base,arcStart,arcEnd,radius:radiusNm}};
@@ -723,7 +810,7 @@
   $('#choose-arc').addEventListener('click',()=>setType('arc'));
   $('#activity-form').addEventListener('submit',event=>{
     event.preventDefault();const result=validateActivity();if(result.error){$('#form-error').textContent=result.error;return;}
-    const base=result.activity,existing=mission.activities.find(a=>a.id===editingId);
+    const base=result.activity,existing=mission.activities.find(a=>a.id===editingId);if(existing)base.direction=existing.direction||(base.type==='arc'?'cw':'outbound');
     if(existing){
       const txs=[];if(base.tx1Planned)txs.push('TX1');if(base.tx2Planned)txs.push('TX2');
       const first={...base,id:existing.id,tx:txs[0],done:existing.done};delete first.tx1Planned;delete first.tx2Planned;
@@ -741,8 +828,12 @@
   ['#mission-name','#mission-number','#mission-date','#station-lat-deg','#station-lat-min','#station-lat-hemi','#station-lon-deg','#station-lon-min','#station-lon-hemi','#station-magvar','#station-magvar-hemi'].forEach(selector=>$(selector).addEventListener('input',()=>{const st=stationCoords();mission.metadata={name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value,stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};save();if(lastPosition){updateGnssReadout();drawAircraft();}}));
   $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão e apagar os dados atuais deste aparelho? Exporte a missão antes se desejar conservá-la.'))return;mission={metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[]};save();load();resetForm();fitMission();renderAll();});
   $('#export-btn').addEventListener('click',exportMission);$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
+  $('#reverse-direction-plan').addEventListener('click',reversePlannedGeometry);
   $('#gnss-toggle').addEventListener('click',toggleGnss);
-  $('#complete-next').addEventListener('click',completeActive);
+  $('#step-complete').addEventListener('click',completeActive);
+  $('#step-prev').addEventListener('click',()=>moveActive(-1));
+  $('#step-next').addEventListener('click',()=>moveActive(1));
+  $('#step-undo').addEventListener('click',undoComplete);
   $('#center-aircraft').addEventListener('click',centerAircraft);
   $('#center-aid').addEventListener('click',centerAid);
   $('#zoom-in').addEventListener('click',()=>setZoom(viewZoom*1.35));$('#zoom-out').addEventListener('click',()=>setZoom(viewZoom/1.35));$('#zoom-fit').addEventListener('click',fitMission);$('#zoom-fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await $('#rose-panel').requestFullscreen();}catch(_){}});document.addEventListener('fullscreenchange',()=>{$('#zoom-fullscreen').textContent=document.fullscreenElement?'Sair da tela cheia':'Tela cheia';});
