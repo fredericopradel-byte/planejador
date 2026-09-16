@@ -656,11 +656,16 @@
     const num=id=>{const s=String($(id).value||'').trim().replace(',','.');return s===''?NaN:Number(s);};
     const latDeg=num('#station-lat-deg'),latMin=num('#station-lat-min');
     const lonDeg=num('#station-lon-deg'),lonMin=num('#station-lon-min');
-    if(![latDeg,latMin,lonDeg,lonMin].every(Number.isFinite))return null;
+    if(![latDeg,latMin,lonDeg,lonMin].every(Number.isFinite)||latDeg<0||latDeg>90||lonDeg<0||lonDeg>180||latMin<0||latMin>=60||lonMin<0||lonMin>=60||(latDeg===90&&latMin>0)||(lonDeg===180&&lonMin>0))return null;
     let lat=latDeg+latMin/60,lon=lonDeg+lonMin/60;
     if($('#station-lat-hemi').value==='S')lat=-lat;
     if($('#station-lon-hemi').value==='W')lon=-lon;
     return {lat,lon};
+  }
+  function magneticVariation(){
+    const value=num($('#station-magvar').value);
+    if(!Number.isFinite(value)||value<0||value>90)return 0;
+    return $('#station-magvar-hemi').value==='W'?-value:value;
   }
   function trueToMagnetic(trueBearing){return (trueBearing-magneticVariation()+360)%360;}
   function bearingDistance(lat1,lon1,lat2,lon2){
