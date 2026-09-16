@@ -10,6 +10,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>IV-PLANNER</title>
+<meta name="iv-planner-build" content="2.6">
 <style>
   :root{color-scheme:light dark;--bg:#eeeeef;--panel:#fafafa;--text:#252629;--muted:#696b70;--border:#b8b9bd;--accent:#b3262d;--blue:#1473e6;--red:#c62830;--danger:#9f1f25;--soft:#e2e2e4}
   *{box-sizing:border-box}
@@ -231,8 +232,9 @@
   .exec-card.is-next{box-shadow:0 0 0 1px color-mix(in srgb,var(--text) 35%,transparent)}
   .exec-card.is-done{opacity:.35}
   .exec-card.dragging{opacity:.7;transform:scale(.99);z-index:5}
-  .exec-card.longpress-ready{box-shadow:0 0 0 2px color-mix(in srgb,var(--text) 55%,transparent);transform:scale(.99)}
+  .exec-card.longpress-ready{box-shadow:0 8px 24px rgba(0,0,0,.38),0 0 0 2px color-mix(in srgb,var(--text) 65%,transparent);transform:scale(1.015);position:relative;z-index:20}
   .exec-card{touch-action:pan-y;-webkit-user-select:none;user-select:none}
+  .execution-list.reordering{touch-action:none;overscroll-behavior:contain}
   .exec-card button{touch-action:manipulation}
   .exec-main{min-width:0}
   .exec-head{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
@@ -654,11 +656,12 @@
     document.querySelectorAll('[data-plan-dir]').forEach(b=>b.classList.toggle('selected',b.dataset.planDir===dir));
   }
   function syncPlanDirectionUI(){
-    const type=document.querySelector('input[name="activity-type"]:checked')?.value||'radial';
-    $('#plan-radial-direction').hidden=type!=='radial';
-    $('#plan-arc-direction').hidden=type!=='arc';
-    if(type==='radial'&&!['inbound','outbound'].includes(planDirection))setPlanDirection('inbound');
-    if(type==='arc'&&!['cw','ccw'].includes(planDirection))setPlanDirection('cw');
+    const type=$('#activity-type').value||'radial';
+    const radial=type==='radial';
+    $('#plan-radial-direction').hidden=!radial;
+    $('#plan-arc-direction').hidden=radial;
+    if(radial&&!['inbound','outbound'].includes(planDirection))setPlanDirection('inbound');
+    if(!radial&&!['cw','ccw'].includes(planDirection))setPlanDirection('cw');
   }
   function segmentText(a){
     if(a.type==='arc'){
@@ -759,7 +762,9 @@
     mission.activities.sort((a,b)=>ids.indexOf(a.id)-ids.indexOf(b.id));save();
   }
   function moveDraggedCard(card,x,y){
+    card.style.pointerEvents='none';
     const target=document.elementFromPoint(x,y)?.closest('.exec-card');
+    card.style.pointerEvents='';
     if(!target||target===card)return;
     const list=$('#execution-list'),rect=target.getBoundingClientRect();
     list.insertBefore(card,y<rect.top+rect.height/2?target:target.nextSibling);
@@ -768,31 +773,75 @@
     return !target.closest('button,input,select,textarea,a,label');
   }
   function installLongPressDrag(card){
-    let timer=null,startX=0,startY=0,armed=false,pointerId=null;
-    card.addEventListener('pointerdown',e=>{
-      if(!neutralPoint(e.target)||e.pointerType==='mouse'&&e.button!==0)return;
-      startX=e.clientX;startY=e.clientY;pointerId=e.pointerId;armed=false;
-      timer=setTimeout(()=>{
-        armed=true;dragState={card,pointerId};card.classList.add('dragging','longpress-ready');
-        try{card.setPointerCapture(pointerId)}catch(_){}
-        if(navigator.vibrate)navigator.vibrate(25);
-      },1000);
-    });
-    card.addEventListener('pointermove',e=>{
-      if(e.pointerId!==pointerId)return;
+    let timer=null,armed=false,startX=0,startY=0,lastX=0,lastY=0;
+    let suppressClick=false;
+
+    const clearArm=()=>{if(timer){clearTimeout(timer);timer=null;}};
+
+    const arm=(x,y)=>{
+      armed=true;suppressClick=true;lastX=x;lastY=y;
+      dragState={card};
+      $('#execution-list').classList.add('reordering');
+      card.classList.add('dragging','longpress-ready');
+      if(navigator.vibrate)navigator.vibrate(25);
+    };
+
+    const finish=()=>{
+      clearArm();
+      if(armed){
+        armed=false;
+        card.classList.remove('dragging','longpress-ready');
+        $('#execution-list').classList.remove('reordering');
+        dragState=null;
+        persistVisualOrder();
+        renderAll();
+      }
+      setTimeout(()=>{suppressClick=false;},250);
+    };
+
+    card.addEventListener('touchstart',e=>{
+      if(e.touches.length!==1||!neutralPoint(e.target))return;
+      const t=e.touches[0];
+      startX=lastX=t.clientX;startY=lastY=t.clientY;
+      clearArm();
+      timer=setTimeout(()=>arm(lastX,lastY),1000);
+    },{passive:true});
+
+    card.addEventListener('touchmove',e=>{
+      if(e.touches.length!==1)return;
+      const t=e.touches[0];lastX=t.clientX;lastY=t.clientY;
       if(!armed){
-        if(Math.hypot(e.clientX-startX,e.clientY-startY)>10){clearTimeout(timer);timer=null;}
+        if(Math.hypot(lastX-startX,lastY-startY)>12)clearArm();
         return;
       }
-      e.preventDefault();moveDraggedCard(card,e.clientX,e.clientY);
+      e.preventDefault();
+      moveDraggedCard(card,lastX,lastY);
     },{passive:false});
-    const finish=e=>{
-      if(e.pointerId!==pointerId)return;
-      clearTimeout(timer);timer=null;
-      if(armed){card.classList.remove('dragging','longpress-ready');dragState=null;persistVisualOrder();renderAll();}
-      armed=false;pointerId=null;
-    };
-    card.addEventListener('pointerup',finish);card.addEventListener('pointercancel',finish);
+
+    card.addEventListener('touchend',finish,{passive:true});
+    card.addEventListener('touchcancel',finish,{passive:true});
+
+    // Desktop: same idea with mouse — hold for 1 s on a neutral area, then drag.
+    card.addEventListener('pointerdown',e=>{
+      if(e.pointerType!=='mouse'||e.button!==0||!neutralPoint(e.target))return;
+      startX=lastX=e.clientX;startY=lastY=e.clientY;
+      clearArm();timer=setTimeout(()=>arm(lastX,lastY),1000);
+    });
+    card.addEventListener('pointermove',e=>{
+      if(e.pointerType!=='mouse')return;
+      lastX=e.clientX;lastY=e.clientY;
+      if(!armed){
+        if(timer&&Math.hypot(lastX-startX,lastY-startY)>8)clearArm();
+        return;
+      }
+      e.preventDefault();moveDraggedCard(card,lastX,lastY);
+    });
+    card.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')finish();});
+    card.addEventListener('pointercancel',e=>{if(e.pointerType==='mouse')finish();});
+
+    card.addEventListener('click',e=>{
+      if(suppressClick){e.preventDefault();e.stopImmediatePropagation();}
+    },true);
     card.addEventListener('contextmenu',e=>{if(armed||timer)e.preventDefault();});
   }
   function renderAll(){renderRose();renderTable();applyView();}
@@ -857,7 +906,6 @@
   $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão e apagar os dados atuais deste aparelho? Exporte a missão antes se desejar conservá-la.'))return;mission={metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[]};save();load();resetForm();fitMission();renderAll();});
   $('#export-btn').addEventListener('click',exportMission);$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
   document.querySelectorAll('[data-plan-dir]').forEach(b=>b.addEventListener('click',()=>setPlanDirection(b.dataset.planDir)));
-  document.querySelectorAll('input[name="activity-type"]').forEach(r=>r.addEventListener('change',syncPlanDirectionUI));
   syncPlanDirectionUI();
   $('#gnss-toggle').addEventListener('click',toggleGnss);
   $('#step-complete').addEventListener('click',completeActive);
