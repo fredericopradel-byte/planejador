@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-17T17:30:00Z",
+  "packages": [
+    {
+      "id": "rotaer-pistas",
+      "title": "ROTAER / aeródromos e pistas",
+      "description": "Aeródromos, coordenadas, elevações, pistas, cabeceiras e fontes de rumo usadas pelas funções locais.",
+      "category": "database",
+      "connected": true,
+      "version": "IU-50-2026-09-16-runways-fixed-2",
+      "bundledVersion": "IU-50-2026-09-16-runways-fixed-2",
+      "effectiveDate": "2026-09-16",
+      "source": "ROTAER e complementos incorporados",
+      "size": 655640,
+      "files": [
+        {
+          "url": "packages/rotaer/IU-50-2026-09-16-runways-fixed-2/legacy-data.js",
+          "target": "prevoo/legacy-data.js",
+          "size": 655640,
+          "sha256": "f52f319eae4252953b7b53c39520038f518c3bf6af33699d9540113e005a87a4"
+        }
+      ]
+    },
+    {
+      "id": "adc-rumos",
+      "title": "ADC / rumos magnéticos publicados",
+      "description": "Rumos magnéticos publicados, emendas ADC e correções incorporadas usadas nas pistas.",
+      "category": "database",
+      "connected": true,
+      "version": "AISWEB-ADC-2026-09-17",
+      "bundledVersion": "AISWEB-ADC-2026-09-17",
+      "effectiveDate": "2026-09-17",
+      "source": "DECEA AISWEB — Carta de Aeródromo",
+      "size": 21287,
+      "files": [
+        {
+          "url": "packages/adc/AISWEB-ADC-2026-09-17/adc-runway-data.js",
+          "target": "adc-runway-data.js",
+          "size": 21287,
+          "sha256": "3cbb124fded9c71c9863f59a658aa321711dd76df5abf41bea8471ce7180d316"
+        }
+      ]
+    },
+    {
+      "id": "aixm-brasil",
+      "title": "AIXM Brasil",
+      "description": "Base estruturada com aeródromos, pistas, cabeceiras, auxílios, fixos, PAPI/VGSI, rotas, procedimentos e espaços aéreos, acompanhada do XML oficial integral.",
+      "category": "database",
+      "connected": true,
+      "version": "AIXM-BR-2026-09-03-r2",
+      "effectiveDate": "2026-09-03",
+      "source": "DECEA AISWEB — AIXM 5.1",
+      "size": 42868890,
+      "files": [
+        {
+          "url": "packages/aixm/AIXM-BR-2026-09-03/aixm-core.json",
+          "target": "publicacoes-offline/aixm/AIXM-BR-2026-09-03/aixm-core.json",
+          "size": 13592826,
+          "sha256": "c3291a53e3987513d2a4277e4496a5ec92f2d0dbe6290c8ea9324c874107c317"
+        },
+        {
+          "url": "packages/aixm/AIXM-BR-2026-09-03/aixm-brasil-5.1.zip.part01",
+          "target": "publicacoes-offline/aixm/AIXM-BR-2026-09-03/aixm-brasil-5.1.zip.part01",
+          "size": 20971520,
+          "sha256": "388ad7d7e0660d00f76e06ad025ad061b22487ed920f504c056263b466b375b2"
+        },
+        {
+          "url": "packages/aixm/AIXM-BR-2026-09-03/aixm-brasil-5.1.zip.part02",
+          "target": "publicacoes-offline/aixm/AIXM-BR-2026-09-03/aixm-brasil-5.1.zip.part02",
+          "size": 8304544,
+          "sha256": "913216014733c7b1143c042b13460a9d7ddfa4f309386f57628f28ab993dd5cb"
+        }
+      ]
+    },
+    {
+      "id": "cartas-aerodromos",
+      "title": "Cartas de aeródromos",
+      "description": "Pacote nacional de ADC, PDC, IAC, SID, STAR e demais cartas associadas aos aeródromos.",
+      "category": "publication",
+      "connected": false,
+      "source": "DECEA AISWEB — Catálogo de cartas"
+    },
+    {
+      "id": "cartas-visuais",
+      "title": "Cartas visuais",
+      "description": "Pacote nacional de VAC, REA, WAC e demais produtos de navegação visual.",
+      "category": "publication",
+      "connected": false,
+      "source": "DECEA AISWEB — Catálogo de cartas"
+    },
+    {
+      "id": "cartas-rota",
+      "title": "Cartas de rota",
+      "description": "Cartas ENRC e demais produtos associados à navegação em rota.",
+      "category": "publication",
+      "connected": false,
+      "source": "DECEA AISWEB — Catálogo de cartas"
+    },
+    {
+      "id": "aip-eaip",
+      "title": "AIP / eAIP",
+      "description": "Publicação de Informação Aeronáutica vigente para consulta integral offline.",
+      "category": "publication",
+      "connected": false,
+      "source": "DECEA AISWEB — AIP Brasil"
+    },
+    {
+      "id": "obstaculos-opea",
+      "title": "Obstáculos / OPEA",
+      "description": "Obstáculos aeronáuticos georreferenciados e informações OPEA.",
+      "category": "database",
+      "connected": false,
+      "source": "DECEA AISWEB — OPEA/Obstáculos"
+    },
+    {
+      "id": "suplementos-aip",
+      "title": "Suplementos AIP",
+      "description": "Informações temporárias com datas de início, término e vigência controladas.",
+      "category": "temporary",
+      "connected": false,
+      "source": "DECEA AISWEB — Suplementos AIP"
+    },
+    {
+      "id": "notam",
+      "title": "NOTAM",
+      "description": "Camada temporária com validade e expiração, independente das bases permanentes.",
+      "category": "temporary",
+      "connected": false,
+      "source": "API-AISWEB"
+    }
+  ]
+}

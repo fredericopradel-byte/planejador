@@ -298,6 +298,15 @@
   .saved-mission-open strong{display:block;font-size:12px}.saved-mission-open span{display:block;font-size:9px;color:var(--muted);margin-top:2px}
   .saved-mission-delete{min-width:32px;min-height:32px;padding:2px 7px;font-size:12px}
   .saved-mission-item.current{border-color:var(--accent)}
+  .aixm-assist{grid-column:1/-1;position:relative;margin-top:-5px}
+  .aixm-status{min-height:15px;color:var(--muted);font-size:10px;line-height:1.35;padding:0 2px}
+  .aixm-status.ok{color:#75c991}.aixm-status.warning{color:#e7b96b}
+  .aixm-results{position:absolute;z-index:80;left:0;right:0;top:19px;max-height:260px;overflow:auto;
+    border:1px solid var(--border);border-radius:12px;background:#202326;box-shadow:0 14px 30px rgba(0,0,0,.42);padding:5px}
+  .aixm-results[hidden]{display:none}
+  .aixm-result{display:block;width:100%;min-height:48px;border:0;border-radius:8px;background:transparent;padding:7px 8px;text-align:left}
+  .aixm-result:active,.aixm-result:hover,.aixm-result:focus{background:rgba(10,164,239,.14)}
+  .aixm-result strong,.aixm-result span{display:block}.aixm-result strong{font-size:12px}.aixm-result span{margin-top:2px;color:var(--muted);font-size:9px}
 
 
   /* Coordenadas FMS: campos de texto numérico, sem valor/stepper nativo do input number */
@@ -345,8 +354,13 @@
   .step-now.active-tx1{border-color:#00a8ff}.step-now.active-tx2{border-color:#ff3045}.swatch.blue{background:#00a8ff}.swatch.red{background:#ff3045}
   #rose-panel:fullscreen{background:radial-gradient(circle at 100% 0,#44494d 0,transparent 30%),linear-gradient(155deg,#151719,#292c2f);padding:18px}.rose-toolbar button{background:#303438}.gnss-warning{color:#8f969c;letter-spacing:.025em}
   @media(max-width:570px){.app{padding:10px 10px calc(82px + env(safe-area-inset-bottom))}.topbar{margin:0 2px 16px!important}.module-brand span{display:none}.panel{padding:11px;border-radius:17px;margin-bottom:10px}.page-nav{left:0!important;right:0!important;bottom:0!important;transform:none;width:100%;border-left:0!important;border-right:0!important;border-bottom:0!important;border-radius:0!important;padding:7px 8px calc(7px + env(safe-area-inset-bottom))!important}.page-nav button{min-height:46px!important}.coord-box{border-radius:12px}.exec-card{border-radius:14px}}
-  @media(max-width:570px){.flight-step-panel{grid-template-columns:1fr!important;padding:11px!important;gap:8px!important}.step-now,.step-next{grid-column:1!important}.step-controls{grid-column:1!important;grid-row:auto!important;grid-template-columns:46px minmax(108px,1fr) 46px 46px!important;width:100%}.map-corner-controls{top:10px;left:10px;grid-template-columns:repeat(4,43px);gap:6px}.map-corner-controls button{width:43px;height:43px;min-height:43px}.rose-stage{min-height:280px}}
+  .mission-title-field,.mission-locality-field,.mission-date-field{grid-column:1/-1!important}.metadata>label{min-width:0}.mission-date-field input{width:100%;min-width:0;max-width:100%}
+  @media(max-width:570px){#page-mission .metadata{grid-template-columns:1fr!important}.flight-step-panel{grid-template-columns:1fr!important;padding:11px!important;gap:8px!important}.step-now,.step-next{grid-column:1!important}.step-controls{grid-column:1!important;grid-row:auto!important;grid-template-columns:46px minmax(108px,1fr) 46px 46px!important;width:100%}.map-corner-controls{top:10px;left:10px;grid-template-columns:repeat(4,43px);gap:6px}.map-corner-controls button{width:43px;height:43px;min-height:43px}.rose-stage{min-height:280px}}
 
+
+  /* Ajuste iOS/Safari — campo Data contido no cartão */
+  .mission-date-field{min-width:0;overflow:hidden;padding-right:2px}
+  .mission-date-field #mission-date{display:block!important;width:calc(100% - 16px)!important;inline-size:calc(100% - 16px)!important;max-width:calc(100% - 16px)!important;max-inline-size:calc(100% - 16px)!important;min-width:0!important;box-sizing:border-box!important}
 </style>
 </head>
 <body>
@@ -367,13 +381,18 @@
     <section class="panel">
       <div class="page-heading"><h2>Identificação da missão</h2></div>
       <div class="metadata">
-        <label>Localidade / auxílio<input id="mission-name" placeholder="Ex.: Porto Velho - PVH"></label>
-        <label>Número do planejamento<input id="mission-number" placeholder="Ex.: 16"></label>
-        <label>Data<input id="mission-date" type="text" inputmode="numeric" maxlength="10" placeholder="DD/MM/AAAA" autocomplete="off"></label>
+        <label class="mission-title-field">Nome da missão<input id="mission-title" placeholder="Ex.: Missão Norte 01" autocomplete="off"></label>
+        <label class="mission-locality-field">Localidade / auxílio<input id="mission-name" placeholder="Ex.: Porto Velho - PVH" autocomplete="off" aria-autocomplete="list" aria-controls="aixm-results"></label>
+        <div class="aixm-assist">
+          <div id="aixm-status" class="aixm-status">Digite ao menos 2 caracteres para consultar VOR/DVOR no pacote AIXM.</div>
+          <div id="aixm-results" class="aixm-results" role="listbox" hidden></div>
+        </div>
+        <input id="mission-number" type="hidden">
+        <label class="mission-date-field">Data<input id="mission-date" type="date" lang="pt-BR" aria-label="Data da missão"></label>
       </div>
       <div class="gnss-grid">
         <div class="coord-box">
-          <div class="coord-title">Latitude do auxílio — formato FMS (DD° MM.mm')</div>
+          <div class="coord-title">Latitude do auxílio — formato FMS (GG MM.MM)</div>
           <div class="coord-parts">
             <label>Graus<input id="station-lat-deg" type="text" inputmode="numeric" maxlength="2" placeholder="08" autocomplete="off"></label>
             <label>Minutos<input id="station-lat-min" type="text" inputmode="decimal" maxlength="5" placeholder="42.83" autocomplete="off"></label>
@@ -381,7 +400,7 @@
           </div>
         </div>
         <div class="coord-box">
-          <div class="coord-title">Longitude do auxílio — formato FMS (DDD° MM.mm')</div>
+          <div class="coord-title">Longitude do auxílio — formato FMS (GGG MM.MM)</div>
           <div class="coord-parts lon">
             <label>Graus<input id="station-lon-deg" type="text" inputmode="numeric" maxlength="3" placeholder="063" autocomplete="off"></label>
             <label>Minutos<input id="station-lon-min" type="text" inputmode="decimal" maxlength="5" placeholder="54.20" autocomplete="off"></label>
@@ -522,6 +541,14 @@
   </section>
 </main>
 
+<script src="../../data/aixm/core.js?v=1"></script>
+<script src="../../data/aixm/aerodromes.js?v=1"></script>
+<script src="../../data/aixm/vor.js?v=1"></script>
+<script src="../../data/aixm/dme.js?v=1"></script>
+<script src="../../data/aixm/ndb.js?v=1"></script>
+<script src="../../data/aixm/papi.js?v=1"></script>
+<script src="../../data/aixm/ils.js?v=1"></script>
+<script src="../../data/aixm-client.js?v=3"></script>
 <script>
 (() => {
   const STORAGE_KEY='geiv-dvor-manual-offline-v1';
@@ -530,7 +557,7 @@
   const svgNS='http://www.w3.org/2000/svg';
   const center=250, radius=190;
   let editingId=null, selectedId=null;
-  let mission={savedMissionId:null,metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};
+  let mission={savedMissionId:null,metadata:{missionTitle:'',name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};
   let viewZoom=1, viewX=center, viewY=center, viewRotation=0, lastPinch=null, lastAngle=null;
   const pointers=new Map();
   let currentPage='mission';
@@ -538,6 +565,8 @@
   let dragState=null;
   let completionHistory=[];
   let planDirection='inbound';
+  let aixmSearchTimer=null;
+  let aixmSearchSequence=0;
 
   function migrateActivities(){
     const out=[];
@@ -581,11 +610,81 @@
     const m=v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     return m?`${m[3]}/${m[2]}/${m[1]}`:v;
   }
-  function maskDateBR(value){
-    const d=String(value||'').replace(/\D/g,'').slice(0,8);
-    if(d.length<=2)return d;
-    if(d.length<=4)return `${d.slice(0,2)}/${d.slice(2)}`;
-    return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`;
+  function dateBRToISO(value){
+    const v=String(value||'').trim();
+    if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v;
+    const m=v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return m?`${m[3]}-${m[2]}-${m[1]}`:'';
+  }
+  function aixmDisplayName(item){
+    return [item.name,item.designator].filter(Boolean).join(' - ');
+  }
+  function setAixmStatus(message,state=''){
+    const status=$('#aixm-status');
+    if(!status)return;
+    status.textContent=message;
+    status.className=`aixm-status${state?` ${state}`:''}`;
+  }
+  function updateAixmSelectionStatus(){
+    const selected=mission.metadata?.aixmNavaid;
+    if(!selected){
+      setAixmStatus('Digite ao menos 2 caracteres para consultar VOR/DVOR no pacote AIXM. A declinação permanece manual.');
+      return;
+    }
+    const adjusted=mission.metadata.coordinateSource==='manual'?' · coordenadas ajustadas manualmente':'';
+    setAixmStatus(`AIXM · ${selected.type||'VOR'} ${selected.designator||''} · base ${selected.version||'instalada'}${adjusted}. Declinação manual.`,'ok');
+  }
+  function hideAixmResults(){
+    const results=$('#aixm-results');if(!results)return;results.hidden=true;results.replaceChildren();
+  }
+  function aixmDetail(item){
+    const details=[String(item.type||'VOR').replace(/_/g,'/')];
+    if(item.frequency?.value)details.push(`${String(item.frequency.value).replace('.',',')} ${item.frequency.uom||'MHz'}`);
+    if(item.channel)details.push(`DME ${item.channel}`);
+    if(item.airport?.designator)details.push(item.airport.designator);
+    return details.join(' · ');
+  }
+  function applyAixmNavaid(item,database){
+    const lat=decimalToFms(item.position.lat,'lat'),lon=decimalToFms(item.position.lon,'lon');
+    $('#mission-name').value=aixmDisplayName(item);
+    $('#station-lat-deg').value=lat.deg;$('#station-lat-min').value=lat.min;$('#station-lat-hemi').value=lat.hemi;
+    $('#station-lon-deg').value=lon.deg;$('#station-lon-min').value=lon.min;$('#station-lon-hemi').value=lon.hemi;
+    mission.metadata={...mission.metadata,
+      name:$('#mission-name').value,number:$('#mission-number').value,date:formatDateBR($('#mission-date').value),
+      stationLat:item.position.lat,stationLon:item.position.lon,magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value,
+      coordinateSource:'AIXM',aixmNavaid:{id:item.id,designator:item.designator,name:item.name,type:item.type,validFrom:item.validFrom||'',version:database.version||'',displayName:aixmDisplayName(item)}
+    };
+    save();hideAixmResults();updateAixmSelectionStatus();
+    if(lastPosition){updateGnssReadout();drawAircraft();}
+  }
+  function renderAixmResults(items,database){
+    const results=$('#aixm-results');results.replaceChildren();
+    if(!items.length){
+      const empty=document.createElement('div');empty.className='aixm-status';empty.textContent='Nenhum VOR/DVOR encontrado.';results.append(empty);results.hidden=false;return;
+    }
+    items.forEach(item=>{
+      const button=document.createElement('button');button.type='button';button.className='aixm-result';button.setAttribute('role','option');
+      const title=document.createElement('strong');title.textContent=aixmDisplayName(item);
+      const detail=document.createElement('span');detail.textContent=aixmDetail(item);
+      button.append(title,detail);button.addEventListener('click',()=>applyAixmNavaid(item,database));results.append(button);
+    });
+    results.hidden=false;
+  }
+  async function searchAixmNavaids(){
+    const query=$('#mission-name').value.trim(),sequence=++aixmSearchSequence;
+    if(query.length<2){hideAixmResults();updateAixmSelectionStatus();return;}
+    if(!window.IVAixm){setAixmStatus('Consulta AIXM indisponível. A entrada manual continua funcionando.','warning');return;}
+    setAixmStatus('Consultando o pacote AIXM instalado…');
+    try{
+      const database=await window.IVAixm.load();
+      if(sequence!==aixmSearchSequence)return;
+      renderAixmResults(window.IVAixm.search(database,query,8),database);
+      setAixmStatus(`AIXM ${database.version||''} · ${database.navaids.length} VOR/DVOR disponíveis offline.`,'ok');
+    }catch(error){
+      if(sequence!==aixmSearchSequence)return;
+      hideAixmResults();
+      setAixmStatus('Pacote AIXM indisponível. Baixe-o em Configurações › Base de dados; a entrada manual continua disponível.','warning');
+    }
   }
   function load(){
     try{
@@ -593,14 +692,17 @@
       if(saved&&saved.metadata&&Array.isArray(saved.activities)) mission=saved;
       migrateActivities();
     }catch(_){ }
+    mission.metadata.date=formatDateBR(mission.metadata.date||'');
+    $('#mission-title').value=mission.metadata.missionTitle||'';
     $('#mission-name').value=mission.metadata.name||'';
     $('#mission-number').value=mission.metadata.number||'';
-    $('#mission-date').value=formatDateBR(mission.metadata.date||'');
+    $('#mission-date').value=dateBRToISO(mission.metadata.date||'');
     const latParts=(mission.metadata.stationLat===''||mission.metadata.stationLat===null||mission.metadata.stationLat===undefined)?{deg:'',min:'',hemi:'S'}:decimalToFms(mission.metadata.stationLat,'lat'),lonParts=(mission.metadata.stationLon===''||mission.metadata.stationLon===null||mission.metadata.stationLon===undefined)?{deg:'',min:'',hemi:'W'}:decimalToFms(mission.metadata.stationLon,'lon');
     $('#station-lat-deg').value=latParts.deg;$('#station-lat-min').value=latParts.min;$('#station-lat-hemi').value=latParts.hemi;
     $('#station-lon-deg').value=lonParts.deg;$('#station-lon-min').value=lonParts.min;$('#station-lon-hemi').value=lonParts.hemi;
     $('#station-magvar').value=mission.metadata.magVar??'';
     $('#station-magvar-hemi').value=mission.metadata.magVarDir||'W';
+    updateAixmSelectionStatus();
   }
   function save(){
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(mission));}catch(_){ }
@@ -695,7 +797,7 @@
   }
 
   function decimalToFms(value,type){
-    const v=Number(value);if(!Number.isFinite(v))return{deg:'',min:'',hemi:type==='lat'?'S':'W'};const abs=Math.abs(v),deg=Math.floor(abs),min=((abs-deg)*60).toFixed(2);return{deg:String(deg).padStart(type==='lat'?2:3,'0'),min,hemi:type==='lat'?(v<0?'S':'N'):(v<0?'W':'E')};
+    const v=Number(value);if(!Number.isFinite(v))return{deg:'',min:'',hemi:type==='lat'?'S':'W'};const total=Math.round(Math.abs(v)*6000)/100,deg=Math.floor(total/60),min=(total-deg*60).toFixed(2).padStart(5,'0');return{deg:String(deg).padStart(type==='lat'?2:3,'0'),min,hemi:type==='lat'?(v<0?'S':'N'):(v<0?'W':'E')};
   }
   function stationCoords(){
     const num=id=>{const s=String($(id).value||'').trim().replace(',','.');return s===''?NaN:Number(s);};
@@ -706,6 +808,12 @@
     if($('#station-lat-hemi').value==='S')lat=-lat;
     if($('#station-lon-hemi').value==='W')lon=-lon;
     return {lat,lon};
+  }
+  function normalizeStationCoordInputs(){
+    const st=stationCoords();if(!st)return;
+    const lat=decimalToFms(st.lat,'lat'),lon=decimalToFms(st.lon,'lon');
+    $('#station-lat-deg').value=lat.deg;$('#station-lat-min').value=lat.min;$('#station-lat-hemi').value=lat.hemi;
+    $('#station-lon-deg').value=lon.deg;$('#station-lon-min').value=lon.min;$('#station-lon-hemi').value=lon.hemi;
   }
   function magneticVariation(){
     const value=num($('#station-magvar').value);
@@ -1015,14 +1123,14 @@
     try{localStorage.setItem(MISSIONS_LIBRARY_KEY,JSON.stringify(items));}catch(_){}
   }
   function missionDisplayName(m){
-    const name=(m.metadata?.name||'Missão sem nome').trim()||'Missão sem nome';
+    const name=(m.metadata?.missionTitle||m.metadata?.name||'Missão sem nome').trim()||'Missão sem nome';
     const number=(m.metadata?.number||'').trim();
     return number?`${name} · Plan. ${number}`:name;
   }
   function saveMissionToLibrary(){
     // Sincroniza os campos antes de guardar.
     const st=stationCoords();
-    mission.metadata={...mission.metadata,name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value,
+    mission.metadata={...mission.metadata,missionTitle:$('#mission-title').value,name:$('#mission-name').value,number:$('#mission-number').value,date:formatDateBR($('#mission-date').value),
       stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};
     if(!mission.savedMissionId)mission.savedMissionId=`m-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
     const library=getMissionLibrary(),copy=JSON.parse(JSON.stringify(mission)),i=library.findIndex(x=>x.savedMissionId===mission.savedMissionId);
@@ -1048,13 +1156,13 @@
       const row=document.createElement('div');row.className='saved-mission-item'+(m.savedMissionId===mission.savedMissionId?' current':'');
       const open=document.createElement('button');open.type='button';open.className='saved-mission-open';
       const title=document.createElement('strong');title.textContent=missionDisplayName(m);
-      const info=document.createElement('span');info.textContent=[m.metadata?.date||'',`${m.activities?.length||0} passagens`].filter(Boolean).join(' · ');
+      const info=document.createElement('span');info.textContent=[formatDateBR(m.metadata?.date||''),`${m.activities?.length||0} passagens`].filter(Boolean).join(' · ');
       open.append(title,info);open.addEventListener('click',()=>openSavedMission(m.savedMissionId));
       const del=document.createElement('button');del.type='button';del.className='saved-mission-delete';del.textContent='×';del.title='Excluir missão salva';del.addEventListener('click',()=>deleteSavedMission(m.savedMissionId));
       row.append(open,del);list.append(row);
     });
   }
-  function exportMission(){const blob=new Blob([JSON.stringify({...mission,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a'),name=(mission.metadata.name||'missao-dvor').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();link.href=url;link.download=`${name||'missao-dvor'}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function exportMission(){const blob=new Blob([JSON.stringify({...mission,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a'),name=(mission.metadata.missionTitle||mission.metadata.name||'missao-dvor').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase();link.href=url;link.download=`${name||'missao-dvor'}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
   function importMission(file){const reader=new FileReader();reader.onload=()=>{try{const data=JSON.parse(reader.result);if(!data.metadata||!Array.isArray(data.activities))throw new Error();mission={metadata:data.metadata,activities:data.activities,activeId:data.activeId||null};migrateActivities();save();load();resetForm();fitMission();renderAll();}catch(_){alert('Arquivo de missão inválido.');}};reader.readAsText(file);}
 
   document.querySelectorAll('.page-nav button').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.page)));
@@ -1077,9 +1185,22 @@
     save();resetForm();fitMission();renderAll();
   });
   $('#cancel-edit').addEventListener('click',resetForm);
-  $('#mission-date').addEventListener('input',e=>{const pos=e.target.selectionStart;e.target.value=maskDateBR(e.target.value);});
-  ['#mission-name','#mission-number','#mission-date','#station-lat-deg','#station-lat-min','#station-lat-hemi','#station-lon-deg','#station-lon-min','#station-lon-hemi','#station-magvar','#station-magvar-hemi'].forEach(selector=>$(selector).addEventListener('input',()=>{const st=stationCoords();mission.metadata={name:$('#mission-name').value,number:$('#mission-number').value,date:$('#mission-date').value,stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};save();if(lastPosition){updateGnssReadout();drawAircraft();}}));
-  $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão? A missão atual continuará na lista somente se tiver sido salva.'))return;mission={savedMissionId:null,metadata:{name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};save();load();resetForm();fitMission();renderAll();renderSavedMissions();});
+  ['#mission-title','#mission-name','#mission-date','#station-lat-deg','#station-lat-min','#station-lat-hemi','#station-lon-deg','#station-lon-min','#station-lon-hemi','#station-magvar','#station-magvar-hemi'].forEach(selector=>$(selector).addEventListener('input',()=>{
+    const st=stationCoords(),coordinateField=selector.startsWith('#station-lat-')||selector.startsWith('#station-lon-');
+    mission.metadata={...mission.metadata,missionTitle:$('#mission-title').value,name:$('#mission-name').value,number:$('#mission-number').value,date:formatDateBR($('#mission-date').value),stationLat:st?st.lat:'',stationLon:st?st.lon:'',magVar:$('#station-magvar').value,magVarDir:$('#station-magvar-hemi').value};
+    if(coordinateField&&mission.metadata.aixmNavaid)mission.metadata.coordinateSource='manual';
+    save();updateAixmSelectionStatus();if(lastPosition){updateGnssReadout();drawAircraft();}
+  }));
+  $('#mission-name').addEventListener('input',()=>{
+    clearTimeout(aixmSearchTimer);
+    if($('#mission-name').value.trim().length<2){aixmSearchSequence+=1;hideAixmResults();return;}
+    aixmSearchTimer=setTimeout(searchAixmNavaids,180);
+  });
+  $('#mission-name').addEventListener('focus',()=>{if($('#mission-name').value.trim().length>=2)searchAixmNavaids();});
+  $('#mission-name').addEventListener('keydown',event=>{if(event.key==='Escape')hideAixmResults();});
+  document.addEventListener('click',event=>{if(!event.target.closest('.metadata'))hideAixmResults();});
+  ['#station-lat-deg','#station-lat-min','#station-lat-hemi','#station-lon-deg','#station-lon-min','#station-lon-hemi'].forEach(selector=>$(selector).addEventListener('change',normalizeStationCoordInputs));
+  $('#new-mission').addEventListener('click',()=>{if(!confirm('Criar uma nova missão? A missão atual continuará na lista somente se tiver sido salva.'))return;mission={savedMissionId:null,metadata:{missionTitle:'',name:'',number:'',date:'',stationLat:'',stationLon:'',magVar:'',magVarDir:'W'},activities:[],activeId:null};save();load();resetForm();fitMission();renderAll();renderSavedMissions();});
   $('#save-mission').addEventListener('click',saveMissionToLibrary);$('#export-mission').addEventListener('click',exportMission);$('#mission-ok').addEventListener('click',()=>showPage('plan'));$('#import-btn').addEventListener('click',()=>$('#import-file').click());$('#import-file').addEventListener('change',event=>{if(event.target.files[0])importMission(event.target.files[0]);event.target.value='';});
   document.querySelectorAll('[data-plan-dir]').forEach(b=>b.addEventListener('click',()=>setPlanDirection(b.dataset.planDir)));
   syncPlanDirectionUI();
