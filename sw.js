@@ -1,4 +1,4 @@
-const CACHE = 'iv-planner-v39-global-nav-icons-20260922';
+const CACHE = 'iv-planner-v47-refresh-viewport-20260923';
 const OWNED_CACHE_PREFIXES = ['iv-planner-', 'geiv-dvor-vor-'];
 const PACKAGE_DB = 'ivplanner-package-manager-v1';
 const PACKAGE_DB_VERSION = 1;
@@ -17,6 +17,8 @@ const APP_SHELL = [
   './icon-512.png',
   './global-nav.css',
   './global-nav.js',
+  './page-ui.css',
+  './page-ui.js',
 
   './prevoo/',
   './prevoo/index.html',
@@ -46,6 +48,7 @@ const APP_SHELL = [
   './meteorologia/index.html',
   './configuracoes/',
   './configuracoes/index.html',
+  './configuracoes/backup.js',
   './configuracoes/bases.html',
   './configuracoes/database-registry.js',
   './configuracoes/package-manager.js',

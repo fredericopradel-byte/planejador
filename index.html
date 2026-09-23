@@ -22,6 +22,8 @@
     html{background:#17191b}
   </style>
   <script src="./global-nav.js?v=20260922-1" defer></script>
+  <link rel="stylesheet" href="page-ui.css?v=20260922-1">
+  <script src="page-ui.js?v=20260922-1" defer></script>
 </head>
 <body><main>
   <header class="brand"><div class="mark" aria-hidden="true"><svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="35" fill="#202427" stroke="currentColor" stroke-width="3"/><circle cx="40" cy="40" r="18" fill="none" stroke="currentColor" stroke-width="2.4" opacity=".82"/><path d="M40 5v22M40 53v22M5 40h22M53 40h22M15 15l16 16M49 49l16 16M65 15L49 31M31 49L15 65" fill="none" stroke="currentColor" stroke-width="2.4" opacity=".82"/><path d="M5 40L38 29 69 10 50 34 47 40 50 46l19 24-31-19z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/><path d="M51 31l13-15-9 16zM51 49l13 15-9-16z" fill="#202427"/></svg></div><div class="wordmark">IV‑PLANNER</div></header>
@@ -37,6 +39,21 @@
 </main><script>['gesturestart','gesturechange','gestureend'].forEach(type=>document.addEventListener(type,event=>event.preventDefault(),{passive:false}));</script>
 <script>
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || document.querySelector('.iv-update-notice')) return;
+    const notice = document.createElement('div');
+    notice.className = 'iv-update-notice';
+    notice.setAttribute('role', 'status');
+    const label = document.createElement('span');
+    label.textContent = 'Atualização pronta para usar.';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Recarregar';
+    button.addEventListener('click', () => location.reload());
+    notice.append(label, button);
+    document.body.append(notice);
+  });
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('./sw.js', { scope: './', updateViaCache: 'none' })
