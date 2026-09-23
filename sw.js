@@ -1,4 +1,4 @@
-const CACHE = 'iv-planner-v51-hawker-20260923';
+const CACHE = 'iv-planner-v53-legacy-floating-nav-20260923';
 const OWNED_CACHE_PREFIXES = ['iv-planner-', 'geiv-dvor-vor-'];
 const PACKAGE_DB = 'ivplanner-package-manager-v1';
 const PACKAGE_DB_VERSION = 1;
@@ -24,6 +24,7 @@ const APP_SHELL = [
   './prevoo/index.html',
   './prevoo/legacy.html',
   './prevoo/legacy-data.js',
+  './prevoo/legacy-afm-performance.js',
   './prevoo/hawker.html',
   './prevoo/hawker-data.js',
 
