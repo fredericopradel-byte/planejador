@@ -1,4 +1,4 @@
-const CACHE = 'iv-planner-v53-legacy-floating-nav-20260923';
+const CACHE = 'iv-planner-v70-ils-gp-p2-pdf-20260924';
 const OWNED_CACHE_PREFIXES = ['iv-planner-', 'geiv-dvor-vor-'];
 const PACKAGE_DB = 'ivplanner-package-manager-v1';
 const PACKAGE_DB_VERSION = 1;
@@ -19,6 +19,7 @@ const APP_SHELL = [
   './global-nav.js',
   './page-ui.css',
   './page-ui.js',
+  './database-update-prompt.js',
 
   './prevoo/',
   './prevoo/index.html',
@@ -38,6 +39,12 @@ const APP_SHELL = [
   './inspecao/dvor-vor/icon-source.svg',
   './inspecao/papi.html',
   './inspecao/legacy-map.png',
+  './inspecao/legacy-profile.png',
+  './inspecao/loc-top.png',
+  './inspecao/loc-side.png',
+  './inspecao/glide-top.png',
+  './inspecao/glide-side.png',
+  './inspecao/report-pdf.js',
   './inspecao/ils.html',
   './inspecao/radar.html',
   './inspecao/par.html',
